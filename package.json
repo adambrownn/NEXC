@@ -54,7 +54,7 @@
     "apexcharts": "^4.3.0",
     "axios": "^1.7.9",
     "card-validator": "^10.0.2",
-    "change-case": "^4.1.2",
+    "change-case": "^5.4.4",
     "d3-array": "^3.2.4",
     "d3-scale": "^4.0.2",
     "date-fns": "^2.23.0",
