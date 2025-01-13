@@ -49,7 +49,7 @@
     "@mui/lab": "^5.0.0-alpha.45",
     "@mui/material": "^6.3.1",
     "@react-pdf/renderer": "^4.1.6",
-    "@testing-library/jest-dom": "^5.14.1",
+    "@testing-library/jest-dom": "^6.6.3",
     "@turf/bbox": "^6.5.0",
     "apexcharts": "^3.27.3",
     "axios": "^0.29.0",
