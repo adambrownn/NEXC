@@ -74,7 +74,7 @@
     "react-dom": "^19.0.0",
     "react-google-login": "^5.2.2",
     "react-google-maps": "^9.4.5",
-    "react-helmet-async": "^1.0.9",
+    "react-helmet-async": "^2.0.5",
     "react-intersection-observer": "^8.32.0",
     "react-map-gl": "^6.1.21",
     "react-router-dom": "^6.0.0-beta.2",
