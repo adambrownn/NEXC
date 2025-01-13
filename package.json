@@ -60,7 +60,7 @@
     "date-fns": "^2.23.0",
     "deck.gl": "^8.5.6",
     "faker": "^5.5.3",
-    "formik": "^2.2.9",
+    "formik": "^2.4.6",
     "framer-motion": "^4.1.17",
     "history": "^5.0.1",
     "immutable": "^4.0.0-rc.14",
