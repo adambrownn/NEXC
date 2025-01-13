@@ -59,7 +59,7 @@
     "d3-scale": "^4.0.2",
     "date-fns": "^4.1.0",
     "deck.gl": "^9.0.38",
-    "faker": "^5.5.3",
+    "faker": "^6.6.6",
     "formik": "^2.4.6",
     "framer-motion": "^4.1.17",
     "history": "^5.0.1",
