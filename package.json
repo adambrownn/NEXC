@@ -47,7 +47,7 @@
     "@material-ui/styles": "^5.0.0-beta.4",
     "@material-ui/utils": "^5.0.0-beta.4",
     "@mui/lab": "^5.0.0-alpha.45",
-    "@mui/material": "^6.3.1",
+    "@mui/material": "^6.4.2",
     "@react-pdf/renderer": "^4.1.6",
     "@testing-library/jest-dom": "^6.6.3",
     "@turf/bbox": "^7.2.0",
