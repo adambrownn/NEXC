@@ -48,7 +48,7 @@
     "@material-ui/utils": "^5.0.0-beta.4",
     "@mui/lab": "^5.0.0-alpha.45",
     "@mui/material": "^6.3.1",
-    "@react-pdf/renderer": "^4.1.6",
+    "@react-pdf/renderer": "^4.2.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@turf/bbox": "^7.2.0",
     "apexcharts": "^4.3.0",
