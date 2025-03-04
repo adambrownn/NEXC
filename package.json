@@ -67,7 +67,7 @@
     "lodash": "^4.17.21",
     "nprogress": "^0.2.0",
     "numeral": "^2.0.6",
-    "prettier": "^3.4.2",
+    "prettier": "^3.5.3",
     "prop-types": "^15.8.1",
     "react": "^19.0.0",
     "react-apexcharts": "^1.7.0",
