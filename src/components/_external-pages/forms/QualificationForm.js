@@ -8,7 +8,7 @@ import {
   DialogActions,
   Stack,
   TextField,
-} from "@material-ui/core";
+} from "@mui/material";
 import axiosInstance from "../../../axiosConfig";
 
 export default function QualificationApplicationForm(props) {

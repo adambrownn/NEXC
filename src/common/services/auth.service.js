@@ -1,25 +1,26 @@
 const jwt = require("jsonwebtoken");
 
 // create json web token
-module.exports.generateJwtToken = async (jwtPayload) => {
-  try {
-    const accessToken = await jwt.sign(jwtPayload, process.env.AUTH_JWT, {
-      expiresIn: process.env.AUTH_JWT_EXPIRY,
-    });
+module.exports.generateJwtToken = async (userDetails) => {
+  // Include phone in token payload if available
+  const tokenPayload = {
+    userId: userDetails.userId,
+    name: userDetails.name,
+    email: userDetails.email,
+    phone: userDetails.phone, // Add this line
+    accountType: userDetails.accountType,
+  };
 
-    const refreshToken = await jwt.sign(
-      { userId: jwtPayload.userId },
-      process.env.AUTH_REFRESH_JWT,
-      {
-        expiresIn: process.env.AUTH_REFRESH_JWT_EXPIRY,
-      }
-    );
+  // Generate tokens as before
+  const accessToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRY,
+  });
 
-    return { accessToken, refreshToken };
-  } catch (error) {
-    console.log(error);
-    return { accessToken: null, refreshToken: null };
-  }
+  const refreshToken = jwt.sign(tokenPayload, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: process.env.JWT_REFRESH_TOKEN_EXPIRY,
+  });
+
+  return { accessToken, refreshToken };
 };
 
 module.exports.extractTokenDetails = async (req, res, next) => {

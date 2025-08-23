@@ -15,8 +15,8 @@ import {
   FormControl,
   Select,
   MenuItem,
-} from "@material-ui/core";
-import { Delete as DeleteIcon } from "@material-ui/icons";
+} from "@mui/material";
+import DeleteIcon from '@mui/icons-material/Delete';
 // components
 import Page from "../Page";
 import Label from "../Label";

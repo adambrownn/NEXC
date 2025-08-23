@@ -1,0 +1,2000 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import axiosInstance from '../../../axiosConfig';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  Stepper,
+  Step,
+  StepLabel,
+  Button,
+  Typography,
+  Box,
+  Grid,
+  TextField,
+  Checkbox,
+  FormControlLabel,
+  Paper,
+  Stack,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  Alert,
+  Container,
+  CircularProgress,
+  LinearProgress,
+  IconButton,
+  Fade,
+  Slide,
+  Skeleton,
+  Drawer,
+  // Rating,
+  Slider,
+  InputAdornment,
+  Autocomplete,
+  // for future use
+  // Tooltip,
+  // Badge,
+  // CardContent
+} from '@mui/material';
+import { useSnackbar } from 'notistack';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import StripePaymentForm from '../../checkout/StripePaymentForm';
+// for future use
+// import FilterListIcon from '@mui/icons-material/FilterList';
+// import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+// import WarningIcon from '@mui/icons-material/Warning';
+import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
+import { salesService } from '../../../services/sales.service';
+
+// const steps = ['Customer Selection', 'Service Selection', 'Service Details', 'Order Summary', 'Payment'];
+
+// Replace backend import with API call function
+const getOrderDetails = async (orderId) => {
+  try {
+    if (!orderId || typeof orderId !== 'string') {
+      console.error('Invalid orderId:', orderId);
+      return null;
+    }
+    const response = await axiosInstance.get(`/v1/orders/${orderId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    throw error;
+  }
+};
+
+const getStripePromise = () => {
+  const key = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_PUBLISHABLE_KEY;
+  if (!key) {
+    console.error('Stripe publishable key is not set in environment variables');
+    return null;
+  }
+  return loadStripe(key);
+};
+
+const stripePromise = getStripePromise();
+
+const QuickOrderPanel = React.memo(({
+  customer,
+  onCustomerNeeded,
+  services: initialServices,
+  onSuccess,
+  qualifications = []
+}) => {
+  // Memoize initial state
+  const initialState = useMemo(() => ({
+    customer: customer || null,
+    services: initialServices || [],
+    qualifications: qualifications || [],
+  }), [customer, initialServices, qualifications]);
+
+  // Core states with proper initialization
+  const [activeStep, setActiveStep] = useState(0);
+  const [selectedCustomer, setSelectedCustomer] = useState(initialState.customer);
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [serviceDetails, setServiceDetails] = useState({});
+  const [orderNotes, setOrderNotes] = useState('');
+  const [isCustomerConfirmed, setIsCustomerConfirmed] = useState(false);
+  const [services, setServices] = useState(initialState.services);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [customerBookings, setCustomerBookings] = useState({ booked: [], reserved: [] });
+
+  // State for search and filtering
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredServices, setFilteredServices] = useState([]);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    priceRange: [0, 1000],
+    location: 'all',
+    deliveryMethod: 'all'
+  });
+
+  // Order and payment states
+  const [orderDraft, setOrderDraft] = useState(null);
+  const [createdOrder, setCreatedOrder] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [orderSummary, setOrderSummary] = useState({});
+  const [currentOrder, setCurrentOrder] = useState(null);
+  const [stripeError, setStripeError] = useState(null);
+  const [formInput, setFormInput] = useState({});
+  const [orderStatus, setOrderStatus] = useState('pending');
+  const [orderScheduledDate, setOrderScheduledDate] = useState('');
+  const [orderPriority, setOrderPriority] = useState('normal');
+
+
+  // Stripe states with proper initialization
+  const [stripe, setStripe] = useState(null);
+  const [paymentIntent, setPaymentIntent] = useState(null);
+  const [paymentError, setPaymentError] = useState(null);
+  const { enqueueSnackbar } = useSnackbar();
+
+  // Service and customer management
+  const handleServiceDetailsUpdate = useCallback((serviceId, details) => {
+    setServiceDetails(prev => ({
+      ...prev,
+      [serviceId]: details
+    }));
+  }, []);
+  
+  const handleCustomerConfirmation = useCallback((confirmed) => {
+    setIsCustomerConfirmed(confirmed);
+    if (confirmed) {
+      enqueueSnackbar('Customer details confirmed', { variant: 'success' });
+    }
+  }, [enqueueSnackbar]);
+  
+  // Order verification
+  const verifyOrder = useCallback(async (orderId) => {
+    try {
+      const orderData = await getOrderDetails(orderId);
+      if (orderData) {
+        setCurrentOrder(orderData);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      enqueueSnackbar('Failed to verify order details', { variant: 'error' });
+      return false;
+    }
+  }, [enqueueSnackbar]);
+
+  // Helper functions
+  const renderCardDetails = useCallback((service) => {
+    const details = serviceDetails[service._id || service.id] || {};
+    const cardDetails = details.cardDetails || {};
+    
+    return (
+      <Stack spacing={2}>
+        <FormControl fullWidth>
+          <InputLabel>Card Type</InputLabel>
+          <Select
+            value={cardDetails.cardType || ''}
+            onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+              ...details,
+              cardDetails: {
+                ...cardDetails,
+                cardType: e.target.value
+              }
+            })}
+            label="Card Type"
+          >
+            <MenuItem value="New">New</MenuItem>
+            <MenuItem value="Duplicate">Duplicate</MenuItem>
+            <MenuItem value="Renewal">Renewal</MenuItem>
+          </Select>
+        </FormControl>
+        
+        <TextField
+          fullWidth
+          label="Delivery Location (if different than home address)"
+          value={cardDetails.deliveryLocation || ''}
+          onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+            ...details,
+            cardDetails: {
+              ...cardDetails,
+              deliveryLocation: e.target.value
+            }
+          })}
+        />
+        
+        <TextField
+          fullWidth
+          label="Card Registration ID"
+          value={cardDetails.cardRegID || ''}
+          onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+            ...details,
+            cardDetails: {
+              ...cardDetails,
+              cardRegID: e.target.value
+            }
+          })}
+          helperText="Individual ID linked to card (optional)"
+        />
+        
+        <FormControl fullWidth>
+          <Typography variant="subtitle2" gutterBottom>
+            Recipient Details (if different from customer)
+          </Typography>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Recipient Name"
+              value={cardDetails.recipientDetails?.name || ''}
+              onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+                ...details,
+                cardDetails: {
+                  ...cardDetails,
+                  recipientDetails: {
+                    ...(cardDetails.recipientDetails || {}),
+                    name: e.target.value
+                  }
+                }
+              })}
+            />
+            <TextField
+              fullWidth
+              label="Recipient Address"
+              value={cardDetails.recipientDetails?.address || ''}
+              onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+                ...details,
+                cardDetails: {
+                  ...cardDetails,
+                  recipientDetails: {
+                    ...(cardDetails.recipientDetails || {}),
+                    address: e.target.value
+                  }
+                }
+              })}
+            />
+          </Stack>
+        </FormControl>
+        
+        <FormControl fullWidth>
+          <Typography variant="subtitle2" gutterBottom>
+            Verification Documents
+          </Typography>
+          <Stack spacing={1} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Document 1"
+              placeholder="e.g., Passport, Driver's License"
+              value={cardDetails.verificationDocuments?.[0] || ''}
+              onChange={(e) => {
+                const newDocs = [...(cardDetails.verificationDocuments || [])];
+                newDocs[0] = e.target.value;
+                handleServiceDetailsUpdate(service._id || service.id, {
+                  ...details,
+                  cardDetails: {
+                    ...cardDetails,
+                    verificationDocuments: newDocs
+                  }
+                });
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Document 2"
+              placeholder="e.g., Utility Bill, Bank Statement"
+              value={cardDetails.verificationDocuments?.[1] || ''}
+              onChange={(e) => {
+                const newDocs = [...(cardDetails.verificationDocuments || [])];
+                newDocs[1] = e.target.value;
+                handleServiceDetailsUpdate(service._id || service.id, {
+                  ...details,
+                  cardDetails: {
+                    ...cardDetails,
+                    verificationDocuments: newDocs
+                  }
+                });
+              }}
+            />
+          </Stack>
+        </FormControl>
+      </Stack>
+    );
+  }, [serviceDetails, handleServiceDetailsUpdate]);
+
+  const renderTestDetails = useCallback((service) => {
+    const details = serviceDetails[service._id || service.id] || {};
+    const testDetails = details.testDetails || {};
+    
+    return (
+      <Stack spacing={2}>
+        <TextField
+          fullWidth
+          label="CITB Test ID"
+          value={testDetails.citbTestId || ''}
+          onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+            ...details,
+            testDetails: {
+              ...testDetails,
+              citbTestId: e.target.value
+            }
+          })}
+        />
+        
+        <TextField
+          fullWidth
+          label="Test Date"
+          type="date"
+          InputLabelProps={{ shrink: true }}
+          value={testDetails.testDate || ''}
+          onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+            ...details,
+            testDetails: {
+              ...testDetails,
+              testDate: e.target.value
+            }
+          })}
+        />
+        
+        <TextField
+          fullWidth
+          label="Test Time"
+          type="time"
+          InputLabelProps={{ shrink: true }}
+          value={testDetails.testTime || ''}
+          onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+            ...details,
+            testDetails: {
+              ...testDetails,
+              testTime: e.target.value
+            }
+          })}
+        />
+        
+        <TextField
+          fullWidth
+          label="Test Centre"
+          value={testDetails.testCentre || ''}
+          onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+            ...details,
+            testDetails: {
+              ...testDetails,
+              testCentre: e.target.value
+            }
+          })}
+        />
+        
+        <FormControl fullWidth>
+          <InputLabel>Voiceover Language</InputLabel>
+          <Select
+            value={testDetails.voiceover || ''}
+            onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+              ...details,
+              testDetails: {
+                ...testDetails,
+                voiceover: e.target.value
+              }
+            })}
+            label="Voiceover Language"
+          >
+            <MenuItem value="English">English</MenuItem>
+            <MenuItem value="Welsh">Welsh</MenuItem>
+            <MenuItem value="Polish">Polish</MenuItem>
+            <MenuItem value="Romanian">Romanian</MenuItem>
+            <MenuItem value="Russian">Russian</MenuItem>
+            <MenuItem value="Lithuanian">Lithuanian</MenuItem>
+            <MenuItem value="Bulgarian">Bulgarian</MenuItem>
+            <MenuItem value="Portuguese">Portuguese</MenuItem>
+            <MenuItem value="Hungarian">Hungarian</MenuItem>
+            <MenuItem value="Punjabi">Punjabi</MenuItem>
+            <MenuItem value="Urdu">Urdu</MenuItem>
+            <MenuItem value="Gujarati">Gujarati</MenuItem>
+          </Select>
+        </FormControl>
+        
+        <TextField
+          fullWidth
+          multiline
+          rows={2}
+          label="Special Accommodations"
+          value={testDetails.accommodations || ''}
+          onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+            ...details,
+            testDetails: {
+              ...testDetails,
+              accommodations: e.target.value
+            }
+          })}
+          helperText="Any special needs or requirements"
+        />
+        
+        <FormControl fullWidth>
+          <Typography variant="subtitle2" gutterBottom>
+            Test Modules (Optional)
+          </Typography>
+          <Stack spacing={1} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Module 1"
+              value={testDetails.testModules?.[0] || ''}
+              onChange={(e) => {
+                const newModules = [...(testDetails.testModules || [])];
+                newModules[0] = e.target.value;
+                handleServiceDetailsUpdate(service._id || service.id, {
+                  ...details,
+                  testDetails: {
+                    ...testDetails,
+                    testModules: newModules
+                  }
+                });
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Module 2"
+              value={testDetails.testModules?.[1] || ''}
+              onChange={(e) => {
+                const newModules = [...(testDetails.testModules || [])];
+                newModules[1] = e.target.value;
+                handleServiceDetailsUpdate(service._id || service.id, {
+                  ...details,
+                  testDetails: {
+                    ...testDetails,
+                    testModules: newModules
+                  }
+                });
+              }}
+            />
+          </Stack>
+        </FormControl>
+      </Stack>
+    );
+  }, [serviceDetails, handleServiceDetailsUpdate]);
+
+  const renderCourseDetails = useCallback((service) => {
+    const details = serviceDetails[service._id || service.id] || {};
+    const courseDetails = details.courseDetails || {};
+    
+    return (
+      <Stack spacing={2}>
+        <TextField
+          fullWidth
+          label="Start Date"
+          type="date"
+          InputLabelProps={{ shrink: true }}
+          value={courseDetails.startDate || ''}
+          onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+            ...details,
+            courseDetails: {
+              ...courseDetails,
+              startDate: e.target.value
+            }
+          })}
+        />
+        
+        <TextField
+          fullWidth
+          label="End Date"
+          type="date"
+          InputLabelProps={{ shrink: true }}
+          value={courseDetails.endDate || ''}
+          onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+            ...details,
+            courseDetails: {
+              ...courseDetails,
+              endDate: e.target.value
+            }
+          })}
+        />
+        
+        <FormControl fullWidth>
+          <InputLabel>Delivery Method</InputLabel>
+          <Select
+            value={courseDetails.deliveryMethod || ''}
+            onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+              ...details,
+              courseDetails: {
+                ...courseDetails,
+                deliveryMethod: e.target.value
+              }
+            })}
+            label="Delivery Method"
+          >
+            <MenuItem value="Online">Online</MenuItem>
+            <MenuItem value="In-person">In-person</MenuItem>
+            <MenuItem value="Hybrid">Hybrid</MenuItem>
+          </Select>
+        </FormControl>
+        
+        <FormControl fullWidth>
+          <Typography variant="subtitle2" gutterBottom>
+            Prerequisites
+          </Typography>
+          <Stack spacing={1} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Prerequisite 1"
+              value={courseDetails.prerequisites?.[0] || ''}
+              onChange={(e) => {
+                const newPrereqs = [...(courseDetails.prerequisites || [])];
+                newPrereqs[0] = e.target.value;
+                handleServiceDetailsUpdate(service._id || service.id, {
+                  ...details,
+                  courseDetails: {
+                    ...courseDetails,
+                    prerequisites: newPrereqs
+                  }
+                });
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Prerequisite 2"
+              value={courseDetails.prerequisites?.[1] || ''}
+              onChange={(e) => {
+                const newPrereqs = [...(courseDetails.prerequisites || [])];
+                newPrereqs[1] = e.target.value;
+                handleServiceDetailsUpdate(service._id || service.id, {
+                  ...details,
+                  courseDetails: {
+                    ...courseDetails,
+                    prerequisites: newPrereqs
+                  }
+                });
+              }}
+            />
+          </Stack>
+        </FormControl>
+        
+        <TextField
+          fullWidth
+          multiline
+          rows={2}
+          label="Special Accommodations"
+          value={courseDetails.accommodations || ''}
+          onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+            ...details,
+            courseDetails: {
+              ...courseDetails,
+              accommodations: e.target.value
+            }
+          })}
+          helperText="Any special needs or requirements"
+        />
+      </Stack>
+    );
+  }, [serviceDetails, handleServiceDetailsUpdate]);
+
+  const renderQualificationDetails = useCallback((service) => {
+    const details = serviceDetails[service._id || service.id] || {};
+    const qualificationDetails = details.qualificationDetails || {};
+    
+    return (
+      <Stack spacing={2}>
+        <FormControl fullWidth>
+          <InputLabel>Qualification Level</InputLabel>
+          <Select
+            value={qualificationDetails.level || ''}
+            onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+              ...details,
+              qualificationDetails: {
+                ...qualificationDetails,
+                level: e.target.value
+              }
+            })}
+            label="Qualification Level"
+          >
+            <MenuItem value="Basic">Basic</MenuItem>
+            <MenuItem value="Intermediate">Intermediate</MenuItem>
+            <MenuItem value="Advanced">Advanced</MenuItem>
+          </Select>
+        </FormControl>
+        
+        <FormControl fullWidth>
+          <InputLabel>Delivery Method</InputLabel>
+          <Select
+            value={qualificationDetails.deliveryMethod || ''}
+            onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+              ...details,
+              qualificationDetails: {
+                ...qualificationDetails,
+                deliveryMethod: e.target.value
+              }
+            })}
+            label="Delivery Method"
+          >
+            <MenuItem value="Online">Online</MenuItem>
+            <MenuItem value="In-person">In-person</MenuItem>
+            <MenuItem value="Hybrid">Hybrid</MenuItem>
+          </Select>
+        </FormControl>
+        
+        <FormControl fullWidth>
+          <Typography variant="subtitle2" gutterBottom>
+            Previous Certificate Details
+          </Typography>
+          <Stack spacing={1} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Certificate Number"
+              value={qualificationDetails.previousCertificateDetails?.number || ''}
+              onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+                ...details,
+                qualificationDetails: {
+                  ...qualificationDetails,
+                  previousCertificateDetails: {
+                    ...(qualificationDetails.previousCertificateDetails || {}),
+                    number: e.target.value
+                  }
+                }
+              })}
+            />
+            <TextField
+              fullWidth
+              label="Issuing Authority"
+              value={qualificationDetails.previousCertificateDetails?.issuer || ''}
+              onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+                ...details,
+                qualificationDetails: {
+                  ...qualificationDetails,
+                  previousCertificateDetails: {
+                    ...(qualificationDetails.previousCertificateDetails || {}),
+                    issuer: e.target.value
+                  }
+                }
+              })}
+            />
+            <TextField
+              fullWidth
+              label="Issue Date"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              value={qualificationDetails.previousCertificateDetails?.issueDate || ''}
+              onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+                ...details,
+                qualificationDetails: {
+                  ...qualificationDetails,
+                  previousCertificateDetails: {
+                    ...(qualificationDetails.previousCertificateDetails || {}),
+                    issueDate: e.target.value
+                  }
+                }
+              })}
+            />
+          </Stack>
+        </FormControl>
+        
+        <FormControl fullWidth>
+          <Typography variant="subtitle2" gutterBottom>
+            Verification Documents
+          </Typography>
+          <Stack spacing={1} sx={{ mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Document 1"
+              placeholder="e.g., Previous Certificate, ID"
+              value={qualificationDetails.verificationDocuments?.[0] || ''}
+              onChange={(e) => {
+                const newDocs = [...(qualificationDetails.verificationDocuments || [])];
+                newDocs[0] = e.target.value;
+                handleServiceDetailsUpdate(service._id || service.id, {
+                  ...details,
+                  qualificationDetails: {
+                    ...qualificationDetails,
+                    verificationDocuments: newDocs
+                  }
+                });
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Document 2"
+              placeholder="e.g., Proof of Experience"
+              value={qualificationDetails.verificationDocuments?.[1] || ''}
+              onChange={(e) => {
+                const newDocs = [...(qualificationDetails.verificationDocuments || [])];
+                newDocs[1] = e.target.value;
+                handleServiceDetailsUpdate(service._id || service.id, {
+                  ...details,
+                  qualificationDetails: {
+                    ...qualificationDetails,
+                    verificationDocuments: newDocs
+                  }
+                });
+              }}
+            />
+          </Stack>
+        </FormControl>
+      </Stack>
+    );
+  }, [serviceDetails, handleServiceDetailsUpdate]);
+
+  const getCustomerStatusChip = useCallback((status) => {
+    // Implementation for customer status chip
+    return null;
+  }, []);
+
+  const handleChangeCustomer = useCallback((event, newValue) => {
+    // Implementation for customer change handling
+    setSelectedCustomer(newValue);
+  }, []);
+
+  // Enhanced step validation
+  const validateStep = useCallback(async (step) => {
+    setLoadingStates(prev => ({ ...prev, [`step${step}Validation`]: true }));
+    let isValid = false;
+  
+    try {
+      switch (step) {
+        case 0: // Customer Selection
+          isValid = selectedCustomer && isCustomerConfirmed;
+          break;
+        case 1: // Service Selection
+          isValid = selectedServices.length > 0;
+          break;
+        case 2: // Service Details
+          // Check order-level fields
+          isValid = !!orderStatus;
+          
+          // Then check service-specific fields
+          isValid = isValid && selectedServices.every(service => {
+            const details = serviceDetails[service._id || service.id];
+            if (!details) return false;
+            
+            // Check category-specific fields only
+            if (service.category === 'cards') {
+              const cardDetails = details.cardDetails || {};
+              return !!cardDetails.cardType;
+            } else if (service.category === 'tests') {
+              const testDetails = details.testDetails || {};
+              return !!testDetails.testDate && !!testDetails.testCentre;
+            } else if (service.category === 'courses') {
+              const courseDetails = details.courseDetails || {};
+              return !!courseDetails.startDate && !!courseDetails.deliveryMethod;
+            } else if (service.category === 'qualifications') {
+              const qualificationDetails = details.qualificationDetails || {};
+              return !!qualificationDetails.level && !!qualificationDetails.deliveryMethod;
+            }
+            
+            // For services without a specific category
+            return true;
+          });
+          break;
+        case 3: // Order Summary
+          isValid = orderDraft && orderSummary;
+          break;
+        case 4: // Payment
+          isValid = currentOrder && paymentIntent;
+          break;
+        default:
+          isValid = false;
+      }
+
+      if (isValid) {
+        setStepValidation(prev => ({ ...prev, [step]: true }));
+      }
+      return isValid;
+    } catch (error) {
+      console.error(`Error validating step ${step}:`, error);
+      return false;
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [`step${step}Validation`]: false }));
+    }
+  }, [selectedCustomer, isCustomerConfirmed, selectedServices, serviceDetails, orderDraft, orderSummary, currentOrder, paymentIntent, orderStatus]);
+
+  const handleNext = useCallback(async () => {
+    const isValid = await validateStep(activeStep);
+    setStepValidation(prev => ({ ...prev, [activeStep]: isValid }));
+
+    if (isValid) {
+      // For order summary step, verify order before proceeding
+      if (activeStep === 3 && orderDraft?._id) {
+        const isVerified = await verifyOrder(orderDraft._id);
+        if (!isVerified) {
+          enqueueSnackbar('Failed to verify order. Please try again.', { variant: 'error' });
+          return;
+        }
+      }
+    
+      setActiveStep((prevStep) => prevStep + 1);
+    }
+  }, [activeStep, orderDraft, validateStep, verifyOrder, enqueueSnackbar]);
+
+  // Advanced filtering states
+  const [serviceMetadata, setServiceMetadata] = useState({
+    locations: ['all'],
+    deliveryMethods: ['all'],
+    maxPrice: 1000,
+    categories: []
+  });
+
+  // Price validation state
+  const [priceValidation, setPriceValidation] = useState({
+    isValid: true,
+    errors: []
+  });
+
+  // Enhanced error handling constants
+  const ERROR_MESSAGES = {
+    CUSTOMER: {
+      NOT_FOUND: 'Customer information not found. Please select a customer first.',
+      VALIDATION: 'Please verify customer details before proceeding.',
+    },
+    SERVICE: {
+      NONE_SELECTED: 'Please select at least one service to proceed.',
+      INVALID_PRICE: 'One or more services have invalid prices. Please review your selection.',
+    },
+    PAYMENT: {
+      STRIPE_INIT: 'Payment system initialization failed. Please refresh and try again.',
+      PROCESSING: 'Payment processing failed. Please verify payment details and try again.',
+    },
+    ORDER: {
+      CREATION: 'Order creation failed. Please try again or contact support.',
+      VALIDATION: 'Please review order details before proceeding.',
+    }
+  };
+
+  // Enhanced step management
+  const [stepValidation, setStepValidation] = useState({
+    0: false, // Customer Selection
+    1: false, // Service Selection
+    2: false, // Service Details
+    3: false, // Order Summary
+    4: false  // Payment
+  });
+
+  // Loading states for different operations
+  const [loadingStates, setLoadingStates] = useState({
+    customerValidation: false,
+    serviceLoading: false,
+    orderCreation: false,
+    paymentProcessing: false
+  });
+
+  // Initialize Stripe on mount
+  useEffect(() => {
+    const initializeStripe = async () => {
+      try {
+        if (!stripePromise) {
+          throw new Error('Stripe public key not found');
+        }
+        const stripeInstance = await stripePromise;
+        if (!stripeInstance) {
+          throw new Error('Failed to initialize Stripe');
+        }
+        setStripe(stripeInstance);
+      } catch (err) {
+        setPaymentError(err.message);
+        enqueueSnackbar('Payment system initialization failed', { 
+          variant: 'error',
+          persist: true 
+        });
+      }
+    };
+
+    initializeStripe();
+  }, [enqueueSnackbar]);
+
+  // Fetch customer bookings when customer changes
+  useEffect(() => {
+    const fetchCustomerBookings = async () => {
+      if (!selectedCustomer?._id) return;
+
+      try {
+        const response = await axiosInstance.get(`/customers/${selectedCustomer._id}/bookings`);
+        setCustomerBookings({
+          booked: response.data?.booked || [],
+          reserved: response.data?.reserved || []
+        });
+      } catch (err) {
+        console.error('Error fetching customer bookings:', err);
+        setCustomerBookings({ booked: [], reserved: [] });
+      }
+    };
+
+    fetchCustomerBookings();
+  }, [selectedCustomer]);
+
+  // Clear errors when step changes
+  useEffect(() => {
+    setError(null);
+    setPaymentError(null);
+  }, [activeStep]);
+
+  // Memoize total amount calculation
+  const calculateTotalAmount = useMemo(() => {
+    return selectedServices.reduce((total, service) => {
+      if (typeof service.price !== 'number' || isNaN(service.price)) {
+        console.warn(`Service ${service.id} has invalid price`);
+        return total;
+      }
+      return total + service.price;
+    }, 0);
+  }, [selectedServices]);
+
+  // Update order draft when relevant data changes
+  const updateOrderDraft = useCallback(async () => {
+    if (!selectedCustomer?._id || selectedServices.length === 0) return;
+
+    // Generate order reference
+    const generateOrderReference = () => {
+      const year = new Date().getFullYear();
+      const randomPart = Math.floor(10000 + Math.random() * 90000); // 5-digit random number
+      return `ORD-${year}-${randomPart}`;
+    };
+
+    const orderReference = generateOrderReference();
+
+    const draftData = {
+      customerId: selectedCustomer._id,
+      orderType: 'ONLINE',
+      email: selectedCustomer.email,
+      orderReference: orderReference,
+      // Add order-level fields
+    status: orderStatus || 'pending',
+    scheduledDate: orderScheduledDate || '',
+    priority: orderPriority || 'normal',
+      customer: {
+        _id: selectedCustomer._id,
+        name: `${selectedCustomer.firstName} ${selectedCustomer.lastName}`,
+        email: selectedCustomer.email,
+        phoneNumber: selectedCustomer.phoneNumber,
+        address: selectedCustomer.address,
+        zipcode: selectedCustomer.zipcode,
+        NINumber: selectedCustomer.NINumber
+      },
+      services: selectedServices.map((service, index) => {
+        const details = serviceDetails[service._id || service.id] || {};
+        return {
+          _id: service._id,
+          title: service.title || service.name,
+          type: service.type,
+          quantity: 1,
+          price: service.price,
+          // Include service-specific details but not the common fields
+          details: {
+            // Include only category-specific details
+            ...(service.category === 'cards' ? { cardDetails: details.cardDetails } : {}),
+            ...(service.category === 'tests' ? { testDetails: details.testDetails } : {}),
+            ...(service.category === 'courses' ? { courseDetails: details.courseDetails } : {}),
+            ...(service.category === 'qualifications' ? { qualificationDetails: details.qualificationDetails } : {}),
+            notes: details.notes || ''
+          },
+          // Add anticipated service reference for UI display
+          anticipatedReference: `${orderReference}-S${index + 1}`
+        };
+      }),
+      orderNotes,
+      amount: calculateTotalAmount,
+      paymentStatus: 0
+    };
+
+    setOrderDraft(draftData);
+  }, [selectedCustomer, selectedServices, orderNotes, calculateTotalAmount, orderStatus, orderScheduledDate, orderPriority, serviceDetails]);
+
+  // Handle order creation with proper error handling
+  const handleCreateOrder = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setPaymentError(null);
+
+      if (!orderDraft) {
+        throw new Error('Order draft not available');
+      }
+
+      // Create order
+      const orderResponse = await axiosInstance.post('/v1/orders', orderDraft);
+      const order = orderResponse.data;
+      setCreatedOrder(order);
+
+      // Create payment intent
+      const paymentResponse = await axiosInstance.post('/v1/payments/create-payment-intent', {
+        amount: Math.round(orderDraft.amount * 100),
+        customer: {
+          id: selectedCustomer._id
+        },
+        orderId: order._id
+      });
+
+      setPaymentIntent(paymentResponse.data);
+      setActiveStep(prevStep => prevStep + 1);
+    } catch (err) {
+      console.error('Error creating order:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to create order');
+      enqueueSnackbar('Failed to create order', { variant: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  }, [orderDraft, selectedCustomer?._id, enqueueSnackbar]);
+
+  // Handle payment processing with proper error handling
+  const handlePayment = useCallback(async (paymentMethodId) => {
+    try {
+      setLoading(true);
+      setPaymentError(null);
+
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
+
+      if (!paymentIntent?.client_secret) {
+        throw new Error('Payment intent not created');
+      }
+
+      const { error: confirmError, paymentIntent: confirmedPayment } = 
+        await stripe.confirmCardPayment(paymentIntent.client_secret, {
+          payment_method: paymentMethodId
+        });
+
+      if (confirmError) {
+        throw new Error(confirmError.message);
+      }
+
+      // Generate service references based on the order reference
+      const generateServiceReferences = (orderRef, services) => {
+        return services.map((service, index) => ({
+          serviceId: service._id || service.id,
+          serviceReference: `${orderRef}-S${index + 1}`
+        }));
+      };
+
+      const serviceReferences = generateServiceReferences(
+        createdOrder.orderReference, 
+        selectedServices
+      );
+
+      // Update order with payment success and service references
+      await axiosInstance.patch(`/v1/orders/${createdOrder._id}`, {
+        paymentStatus: 'paid',
+        paymentIntentId: confirmedPayment.id,
+        serviceReferences: serviceReferences
+      });
+
+      setActiveStep(prevStep => prevStep + 1);
+      enqueueSnackbar('Payment processed successfully', { variant: 'success' });
+    } catch (err) {
+      setPaymentError(err.message);
+      enqueueSnackbar(err.message, { variant: 'error' });
+
+      // Update order with payment failure
+      if (createdOrder?._id) {
+        await axiosInstance.patch(`/v1/orders/${createdOrder._id}`, {
+          paymentStatus: 'failed',
+          paymentError: err.message
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [stripe, paymentIntent, createdOrder, enqueueSnackbar, selectedServices]);
+
+  // Add service fetching as a fallback
+  useEffect(() => {
+    const fetchServices = async () => {
+      if (initialServices && initialServices.length > 0) {
+        // If we have services from props, use those
+        setServices(initialServices);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await salesService.getServices();
+        console.log('Fetched services:', data);
+        setServices(data);
+        
+        // Update metadata
+        const uniqueCategories = ['all', ...new Set(data.map(s => s.category).filter(Boolean))];
+        setServiceMetadata(prev => ({
+          ...prev,
+          categories: uniqueCategories
+        }));
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        enqueueSnackbar(error.message || 'Failed to fetch services', { 
+          variant: 'error'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, [initialServices, enqueueSnackbar]);
+
+  // Update filtered services when search query or services change
+  useEffect(() => {
+    if (!services) {
+      setFilteredServices([]);
+      return;
+    }
+    
+    let filtered = services;
+    
+    // Apply search filter
+    const searchTermLower = typeof searchQuery === 'string' 
+      ? searchQuery.toLowerCase().trim() 
+      : '';
+      
+    if (searchTermLower) {
+      filtered = filtered.filter(service => (
+        (service.name?.toLowerCase().includes(searchTermLower)) ||
+        (service.description?.toLowerCase().includes(searchTermLower)) ||
+        (service.category?.toLowerCase().includes(searchTermLower))
+      ));
+    }
+    
+    // Apply category filter if not 'all'
+    if (activeCategory !== 'all') {
+      filtered = filtered.filter(service => service.category === activeCategory);
+    }
+    
+    setFilteredServices(filtered);
+  }, [services, searchQuery, activeCategory]);
+
+  // Update services when qualifications change
+  useEffect(() => {
+    if (qualifications.length > 0) {
+      setServices(prev => prev.map(service => ({
+        ...service,
+        isQualified: qualifications.some(q => q.id === service.qualificationId)
+      })));
+    }
+  }, [qualifications]);
+  
+  // Update order summary when draft changes
+  useEffect(() => {
+    if (orderDraft) {
+      setOrderSummary({
+        customer: selectedCustomer,
+        services: selectedServices,
+        totalAmount: orderDraft.amount,
+        notes: orderDraft.notes,
+        details: serviceDetails
+      });
+    }
+  }, [orderDraft, selectedCustomer, selectedServices, serviceDetails]);
+  
+  // Handle order tracking
+  useEffect(() => {
+    if (createdOrder) {
+      setCurrentOrder(createdOrder);
+    }
+  }, [createdOrder]);
+  
+  // Handle Stripe errors
+  useEffect(() => {
+    if (paymentError) {
+      setStripeError(paymentError);
+      enqueueSnackbar(paymentError, { variant: 'error' });
+    }
+  }, [paymentError, enqueueSnackbar]);
+
+  // Price validation
+  const validatePrices = useCallback(() => {
+    const errors = [];
+    let isValid = true;
+
+    selectedServices.forEach(service => {
+      if (!service.price || service.price <= 0) {
+        errors.push(`${service.title || service.name}: Invalid price`);
+        isValid = false;
+      }
+      
+      // Check for bulk pricing rules
+      if (service.bulkPricing && selectedServices.filter(s => s._id === service._id).length >= service.bulkPricing.threshold) {
+        const discount = service.bulkPricing.discount;
+        if (discount <= 0 || discount >= 100) {
+          errors.push(`${service.title || service.name}: Invalid bulk discount`);
+          isValid = false;
+        }
+      }
+    });
+
+    setPriceValidation({ isValid, errors });
+    return isValid;
+  }, [selectedServices]);
+
+  // Update service metadata
+  useEffect(() => {
+    if (!services) return;
+
+    const metadata = {
+      locations: ['all', ...new Set(services.map(s => s.location).filter(Boolean))],
+      deliveryMethods: ['all', ...new Set(services.map(s => s.deliveryMethod).filter(Boolean))],
+      maxPrice: Math.max(...services.map(s => s.price || 0)),
+      categories: ['all', ...new Set(services.map(s => s.category).filter(Boolean))]
+    };
+
+    setServiceMetadata(metadata);
+    setAdvancedFilters(prev => ({
+      ...prev,
+      priceRange: [0, metadata.maxPrice]
+    }));
+  }, [services]);
+
+  // Validate prices when services change
+  useEffect(() => {
+    validatePrices();
+  }, [selectedServices, validatePrices]);
+
+  // Validation for each step
+  useEffect(() => {
+    const validateCurrentStep = async () => {
+      const isValid = await validateStep(activeStep);
+      setStepValidation(prev => ({ ...prev, [activeStep]: isValid }));
+    };
+    validateCurrentStep();
+  }, [activeStep, selectedCustomer, isCustomerConfirmed, selectedServices, serviceDetails, orderDraft, orderSummary, validateStep]);  
+
+  const handleServiceSelect = useCallback((service) => {
+    if (!service) return;
+
+    setSelectedServices(prev => {
+      const serviceId = service._id || service.id;
+      if (!serviceId) return prev;
+
+      const exists = prev.find(s => (s._id || s.id) === serviceId);
+      if (exists) {
+        return prev.filter(s => (s._id || s.id) !== serviceId);
+      }
+
+      // Check prerequisites
+      if (service.prerequisites?.length > 0) {
+        const missingPrereqs = service.prerequisites.filter(
+          prereq => !prev.find(s => s._id === prereq._id)
+        );
+
+        if (missingPrereqs.length > 0) {
+          enqueueSnackbar(
+            `This service requires: ${missingPrereqs.map(p => p.name).join(', ')}`,
+            { variant: 'warning' }
+          );
+          return prev;
+        }
+      }
+
+      return [...prev, service];
+    });
+  }, [enqueueSnackbar]);
+
+  // Memoize steps to prevent re-creation
+  const steps = useMemo(() => [
+    'Select Customer',
+    'Choose Services',
+    'Service Details',
+    'Payment',
+    'Order Summary'
+  ], []);
+
+  // Create or update order draft
+  useEffect(() => {
+    updateOrderDraft();
+  }, [updateOrderDraft]);
+
+  // Enhanced step navigation
+  const handleStepClick = useCallback((clickedStep) => {
+    if (clickedStep < activeStep) {
+      setActiveStep(clickedStep);
+      setError(null);
+    }
+  }, [activeStep]);
+
+  // Handle back navigation
+  const handleBack = useCallback(() => {
+    if (activeStep === 0) return;
+    setActiveStep((prevStep) => prevStep - 1);
+    // Clear any errors when going back
+    setError(null);
+  }, [activeStep]);
+
+  // Create a completely separate SearchBar component
+  const SearchBar = ({ onSearch }) => {
+    const [inputValue, setInputValue] = useState('');
+    
+    const handleInputChange = (event, newInputValue) => {
+      setInputValue(newInputValue);
+    };
+    
+    const handleChange = (event, value) => {
+      // Only trigger search when user selects an option or presses enter
+      if (value) {
+        onSearch(value);
+      }
+    };
+    
+    const handleKeyDown = (event) => {
+      if (event.key === 'Enter') {
+        onSearch(inputValue);
+      }
+    };
+  
+    return (
+      <Box sx={{ width: '100%', maxWidth: { xs: '100%', sm: '100%', md: '100%' } }}>
+    <Autocomplete
+      freeSolo
+      inputValue={inputValue}
+      onInputChange={handleInputChange}
+      onChange={handleChange}
+      options={[]}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          fullWidth
+          placeholder="Search services..."
+          onKeyDown={handleKeyDown}
+          InputProps={{
+            ...params.InputProps,
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            )
+          }}
+          sx={{ mb: 2 }}
+        />
+      )}
+    />
+  </Box>
+  );
+};
+
+  // Render filter drawer
+  const renderFilterDrawer = () => (
+    <Drawer
+      anchor="right"
+      open={filterDrawerOpen}
+      onClose={() => setFilterDrawerOpen(false)}
+      PaperProps={{ sx: { width: 320, p: 3 } }}
+    >
+      <Stack spacing={3}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">Advanced Filters</Typography>
+          <IconButton onClick={() => setFilterDrawerOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
+        <FormControl fullWidth>
+          <Typography gutterBottom>Price Range</Typography>
+          <Slider
+            value={advancedFilters.priceRange}
+            onChange={(_, value) => setAdvancedFilters(prev => ({ ...prev, priceRange: value }))}
+            valueLabelDisplay="auto"
+            min={0}
+            max={serviceMetadata.maxPrice}
+            valueLabelFormat={value => `£${value}`}
+          />
+        </FormControl>
+
+        <FormControl fullWidth>
+          <InputLabel>Location</InputLabel>
+          <Select
+            value={advancedFilters.location}
+            onChange={e => setAdvancedFilters(prev => ({ ...prev, location: e.target.value }))}
+            label="Location"
+          >
+            {serviceMetadata.locations.map(location => (
+              <MenuItem key={location} value={location}>
+                {location === 'all' ? 'All Locations' : location}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth>
+          <InputLabel>Delivery Method</InputLabel>
+          <Select
+            value={advancedFilters.deliveryMethod}
+            onChange={e => setAdvancedFilters(prev => ({ ...prev, deliveryMethod: e.target.value }))}
+            label="Delivery Method"
+          >
+            {serviceMetadata.deliveryMethods.map(method => (
+              <MenuItem key={method} value={method}>
+                {method === 'all' ? 'All Methods' : method}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={advancedFilters.hasPrerequisites}
+              onChange={e => setAdvancedFilters(prev => ({ ...prev, hasPrerequisites: e.target.checked }))}
+            />
+          }
+          label="Has Prerequisites"
+        />
+
+        <Button variant="outlined" onClick={() => setAdvancedFilters({
+          priceRange: [0, serviceMetadata.maxPrice],
+          location: 'all',
+          deliveryMethod: 'all',
+          status: 'active',
+          hasPrerequisites: false,
+          rating: 0
+        })}>
+          Clear Filters
+        </Button>
+      </Stack>
+    </Drawer>
+  );
+
+  // Render service selection
+  const renderServiceSelection = () => {
+    return (
+      <Box> 
+        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+          <SearchBar onSearch={setSearchQuery} />
+        </Box>
+
+        {/* Categories */}
+        <Box sx={{ mb: 3 }}>
+          <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
+            {serviceMetadata?.categories?.map((cat) => (
+              <Chip
+                key={cat}
+                label={cat}
+                onClick={() => setActiveCategory(cat)}
+                color={activeCategory === cat ? 'primary' : 'default'}
+                sx={{ cursor: 'pointer' }}
+              />
+            ))}
+          </Stack>
+        </Box>
+
+        {!priceValidation.isValid && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {priceValidation.errors.map((error, index) => (
+              <div key={index}>{error}</div>
+            ))}
+          </Alert>
+        )}
+
+        <Grid container spacing={2}>
+          {!loading && filteredServices.length > 0 ? (
+            filteredServices.map((service) => (
+              <Grid item xs={12} sm={6} md={4} key={service._id || service.id}>
+                <Paper
+                  elevation={3}
+                  sx={{
+                    p: 2,
+                    cursor: 'pointer',
+                    position: 'relative',
+                    ...(selectedServices.some(s => (s._id || s.id) === (service._id || service.id)) && {
+                      border: '2px solid',
+                      borderColor: 'primary.main'
+                    })
+                  }}
+                  onClick={() => handleServiceSelect(service)}
+                >
+                  <Typography variant="h6">{service.title}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {service.description}
+                  </Typography>
+                  <Typography variant="h6" sx={{ mt: 1 }}>
+                    £{service.price}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))
+          ) : (
+            <Grid item xs={12}>
+              <Typography variant="body1" color="text.secondary" align="center">
+                {loading ? 'Loading services...' : 'No services found matching your criteria'}
+              </Typography>
+            </Grid>
+          )}
+        </Grid>
+      </Box>
+    );
+  };
+
+  // Order-level fields to the form
+const renderOrderDetails = () => (
+  <Paper sx={{ p: 2, mb: 3 }}>
+    <Typography variant="subtitle1" gutterBottom>
+      Order Details
+    </Typography>
+    <Stack spacing={2}>
+      <FormControl fullWidth>
+        <InputLabel>Order Status</InputLabel>
+        <Select
+          value={orderStatus || 'pending'}
+          onChange={(e) => setOrderStatus(e.target.value)}
+          label="Order Status"
+        >
+          <MenuItem value="pending">Pending</MenuItem>
+          <MenuItem value="in_progress">In Progress</MenuItem>
+          <MenuItem value="completed">Completed</MenuItem>
+          <MenuItem value="cancelled">Cancelled</MenuItem>
+        </Select>
+      </FormControl>
+      
+      <TextField
+        fullWidth
+        label="Scheduled Date"
+        type="date"
+        InputLabelProps={{ shrink: true }}
+        value={orderScheduledDate || ''}
+        onChange={(e) => setOrderScheduledDate(e.target.value)}
+      />
+      
+      <FormControl fullWidth>
+        <InputLabel>Order Priority</InputLabel>
+        <Select
+          value={orderPriority || 'normal'}
+          onChange={(e) => setOrderPriority(e.target.value)}
+          label="Order Priority"
+        >
+          <MenuItem value="low">Low</MenuItem>
+          <MenuItem value="normal">Normal</MenuItem>
+          <MenuItem value="high">High</MenuItem>
+          <MenuItem value="urgent">Urgent</MenuItem>
+        </Select>
+      </FormControl>
+    </Stack>
+  </Paper>
+);
+
+  // Render service details
+  const renderServiceDetails = () => {
+    if (loadingStates.serviceLoading) {
+      return <ContentSkeleton />;
+    }
+
+    return (
+      <Stack spacing={3}>
+      {/* First render the order-level details */}
+      {renderOrderDetails()}
+      
+      {/* Then render service-specific details */}
+      {selectedServices.map((service) => {
+        const details = serviceDetails[service._id || service.id] || {};
+        
+        return (
+          <Paper key={service._id || service.id} sx={{ p: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              {service.title || service.name}
+            </Typography>
+            <Stack spacing={2}>
+              {/* Only show service reference ID (read-only) */}
+              <TextField
+                fullWidth
+                label="Service Reference ID"
+                value={details.referenceId || `Will be generated as ${orderDraft?.orderReference}-S${selectedServices.indexOf(service) + 1}`}
+                disabled={true}
+                helperText="Will be automatically generated after payment"
+              />
+              
+              {/* Category-specific fields */}
+              {service.category === 'cards' && renderCardDetails(service)}
+              {service.category === 'tests' && renderTestDetails(service)}
+              {service.category === 'courses' && renderCourseDetails(service)}
+              {service.category === 'qualifications' && renderQualificationDetails(service)}
+              
+              {/* Keep service-specific notes */}
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Additional Notes"
+                value={details.notes || ''}
+                onChange={(e) => handleServiceDetailsUpdate(service._id || service.id, {
+                  ...details,
+                  notes: e.target.value
+                })}
+              />
+            </Stack>
+          </Paper>
+        );
+      })}
+      {selectedServices.length === 0 && (
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="body1" color="text.secondary" align="center">
+            {ERROR_MESSAGES.SERVICE.NONE_SELECTED}
+          </Typography>
+        </Paper>
+      )}
+    </Stack>
+  );
+};
+
+  // Render order summary
+  const renderOrderSummary = () => {
+    if (loadingStates.orderCreation) {
+      return (
+        <Stack spacing={2}>
+          <Skeleton variant="rectangular" height={60} />
+          <Skeleton variant="rectangular" height={40} />
+          <Skeleton variant="rectangular" height={40} />
+          <Stack direction="row" spacing={2}>
+            <Skeleton variant="rectangular" width={100} height={40} />
+            <Skeleton variant="rectangular" width={100} height={40} />
+          </Stack>
+        </Stack>
+      );
+    }
+
+    // Guard clause for when selectedCustomer is null
+    if (!selectedCustomer) {
+      return (
+        <Paper sx={{ p: 2 }}>
+          <Typography color="error">
+            No customer selected. Please go back and select a customer.
+          </Typography>
+        </Paper>
+      );
+    }
+
+    if (!orderSummary) {
+      return (
+        <Stack spacing={3}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Review Order Details
+            </Typography>
+
+            <Paper sx={{ p: 2, mt: 2 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Customer Information
+              </Typography>
+              <Typography>
+                {selectedCustomer.firstName} {selectedCustomer.lastName}
+                <Typography component="span" color="text.secondary" sx={{ ml: 1 }}>
+                  ({selectedCustomer.email})
+                </Typography>
+              </Typography>
+              {selectedCustomer.status && getCustomerStatusChip(selectedCustomer.status)}
+            </Paper>
+
+            <Paper sx={{ p: 2, mt: 2 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Selected Services
+              </Typography>
+              {selectedServices.length > 0 ? (
+                <Stack spacing={2}>
+                  {selectedServices.map((service) => (
+                    <Alert severity="info" key={service.id}>
+                      <Typography variant="subtitle1">
+                        {service.name}
+                      </Typography>
+                      {serviceDetails[service.id] && (
+                        <Typography variant="body2" color="text.secondary">
+                          Details: {JSON.stringify(serviceDetails[service.id])}
+                        </Typography>
+                      )}
+                      <Typography variant="subtitle1" color="primary">
+                        £{service.price || 0}
+                      </Typography>
+                    </Alert>
+                  ))}
+                  <Typography variant="h6" align="right">
+                    Total: £{selectedServices.reduce((sum, service) => sum + (service.price || 0), 0)}
+                  </Typography>
+                </Stack>
+              ) : (
+                <Typography color="text.secondary">
+                  No services selected. Please go back and select services.
+                </Typography>
+              )}
+            </Paper>
+
+            <TextField
+              multiline
+              rows={3}
+              label="Order Notes"
+              value={orderNotes}
+              onChange={(e) => setOrderNotes(e.target.value)}
+              fullWidth
+              sx={{ mt: 2 }}
+            />
+
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleCreateOrder}
+              fullWidth
+              sx={{ mt: 2 }}
+              disabled={selectedServices.length === 0}
+            >
+              Create Order
+            </Button>
+          </Paper>
+        </Stack>
+      );
+    }
+
+    // Only render if orderSummary exists
+    return (
+      <Stack spacing={3}>
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Order Created Successfully
+          </Typography>
+          <Typography>
+            Order ID: {orderSummary?.id || 'N/A'}
+          </Typography>
+          <Typography>
+            Order Reference: {createdOrder?.orderReference || orderDraft?.orderReference || 'N/A'}
+          </Typography>
+          <Typography>
+            Total Amount: £{orderSummary?.totalAmount || 0}
+          </Typography>
+          <Typography>
+            Created At: {orderSummary?.createdAt ? new Date(orderSummary.createdAt).toLocaleString() : 'N/A'}
+          </Typography>
+        </Paper>
+
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Customer Information
+          </Typography>
+          <Typography>
+            {selectedCustomer.firstName} {selectedCustomer.lastName}
+            <Typography component="span" color="text.secondary" sx={{ ml: 1 }}>
+              ({selectedCustomer.email})
+            </Typography>
+          </Typography>
+          {selectedCustomer.status && getCustomerStatusChip(selectedCustomer.status)}
+        </Paper>
+      </Stack>
+    );
+  };
+
+  // Render payment
+  const renderPayment = useCallback(() => {
+    if (loadingStates.paymentProcessing) {
+      return (
+        <Stack spacing={2}>
+          <Skeleton variant="rectangular" height={60} />
+          <Skeleton variant="rectangular" height={40} />
+          <Skeleton variant="rectangular" height={40} />
+          <Stack direction="row" spacing={2}>
+            <Skeleton variant="rectangular" width={100} height={40} />
+            <Skeleton variant="rectangular" width={100} height={40} />
+          </Stack>
+        </Stack>
+      );
+    }
+
+    // First check for Stripe initialization errors
+    if (stripeError) {
+      return (
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="body1" color="error">
+            Payment system is currently unavailable: {stripeError}
+          </Typography>
+        </Paper>
+      );
+    }
+
+    // Then check for order availability
+    if (!currentOrder?._id || !currentOrder?.amount) {
+      return (
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="body1" color="error">
+            Error: Order information is not available. Please try again.
+          </Typography>
+        </Paper>
+      );
+    }
+
+    const customerForStripe = {
+      name: `${selectedCustomer.firstName} ${selectedCustomer.lastName}`,
+      email: selectedCustomer.email,
+      id: selectedCustomer._id
+    };
+
+    const orderForStripe = {
+      id: currentOrder._id,
+      amount: currentOrder.amount
+    };
+
+    return (
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Payment Details
+        </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Order Reference: {currentOrder.orderReference || 'N/A'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Total Amount: £{currentOrder.amount.toFixed(2)}
+        </Typography>
+        <StripePaymentForm
+          handleCompleteOrder={handlePayment}
+          formInput={formInput}
+          setFormInput={setFormInput}
+          cardholderName={customerForStripe.name}
+          amount={currentOrder.amount}
+          customer={customerForStripe}
+          order={orderForStripe}
+        />
+      </Paper>
+    );
+  }, [currentOrder, selectedCustomer, formInput, handlePayment, stripeError, loadingStates.paymentProcessing]);
+
+  // Add transition component for step content
+  const StepTransition = ({ children, index }) => (
+    <Fade in={activeStep === index} timeout={300}>
+      <Slide direction="left" in={activeStep === index} timeout={300}>
+        <div>{children}</div>
+      </Slide>
+    </Fade>
+  );
+
+  // Add skeleton loader component
+  const ContentSkeleton = () => (
+    <Stack spacing={2}>
+      <Skeleton variant="rectangular" height={60} />
+      <Skeleton variant="rectangular" height={40} />
+      <Skeleton variant="rectangular" height={40} />
+      <Stack direction="row" spacing={2}>
+        <Skeleton variant="rectangular" width={100} height={40} />
+        <Skeleton variant="rectangular" width={100} height={40} />
+      </Stack>
+    </Stack>
+  );
+
+  // Update customer selection render with skeleton
+  const renderCustomerSelection = () => {
+    if (loadingStates.customerValidation) {
+      return <ContentSkeleton />;
+    }
+
+    if (selectedCustomer) {
+      return (
+        <Box sx={{ mt: 2, textAlign: 'center' }}>
+          <Typography variant="body1">{selectedCustomer.firstName} {selectedCustomer.lastName}</Typography>
+          <Typography variant="body2" color="text.secondary">{selectedCustomer.email}</Typography>
+          <Typography variant="body2" color="text.secondary">{selectedCustomer.phoneNumber}</Typography>
+          <Typography variant="subtitle2" sx={{ mt: 2 }}>Customer Bookings:</Typography>
+          <Box sx={{ ml: 2 }}>
+            <Typography variant="body2">Booked: {customerBookings.booked.length}</Typography>
+            <Typography variant="body2">Reserved: {customerBookings.reserved.length}</Typography>
+          </Box>
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              onClick={handleChangeCustomer}
+              sx={{ mr: 2 }}
+            >
+              Change Customer
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => handleCustomerConfirmation(true)}
+              startIcon={<CheckCircleIcon />}
+              disabled={isCustomerConfirmed}
+            >
+              {isCustomerConfirmed ? 'Details Confirmed' : 'Confirm Details'}
+            </Button>
+          </Box>
+        </Box>
+      );
+    }
+  }
+
+  // Update step content render with transitions
+  const renderStepContent = (step) => (
+    <StepTransition index={step}>
+      {(() => {
+        switch (step) {
+          case 0:
+            return renderCustomerSelection();
+          case 1:
+            return renderServiceSelection();
+          case 2:
+            return renderServiceDetails();
+          case 3:
+            return renderOrderSummary();
+          case 4:
+            return renderPayment();
+          default:
+            return null;
+        }
+      })()}
+    </StepTransition>
+  );
+
+  // Update main return with improved loading feedback
+  return (
+    <Container>
+      {renderFilterDrawer()}
+      <Stepper 
+        activeStep={activeStep} 
+        alternativeLabel
+        sx={{ mb: 4 }}
+      >
+        {steps.map((label, index) => (
+          <Step 
+            key={label}
+            completed={stepValidation[index]}
+            onClick={() => index < activeStep && handleStepClick(index)}
+            sx={{ 
+              cursor: index < activeStep ? 'pointer' : 'default',
+              '& .MuiStepLabel-root': {
+                color: theme => index < activeStep ? theme.palette.primary.main : 'inherit'
+              }
+            }}
+          >
+            <StepLabel
+              error={!stepValidation[index] && error && activeStep === index}
+              optional={index === activeStep && loadingStates[`step${index}Validation`] && (
+                <CircularProgress size={16} />
+              )}
+            >
+              {label}
+            </StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+
+      {error && (
+        <Alert 
+          severity="error" 
+          sx={{ mb: 2 }}
+          action={
+            <IconButton
+              aria-label="close"
+              color="inherit"
+              size="small"
+              onClick={() => setError(null)}
+            >
+              <CloseIcon fontSize="inherit" />
+            </IconButton>
+          }
+        >
+          {error}
+        </Alert>
+      )}
+
+      <Box sx={{ position: 'relative' }}>
+        {Object.values(loadingStates).some(state => state) && (
+          <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1 }}>
+            <LinearProgress />
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                display: 'block',
+                textAlign: 'center',
+                mt: 1,
+                color: 'text.secondary'
+              }}
+            >
+              {loadingStates.customerValidation && 'Validating customer information...'}
+              {loadingStates.serviceLoading && 'Loading services...'}
+              {loadingStates.orderCreation && 'Creating order...'}
+              {loadingStates.paymentProcessing && 'Processing payment...'}
+            </Typography>
+          </Box>
+        )}
+        
+        {renderStepContent(activeStep)}
+
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+          <Button
+            onClick={handleBack}
+            disabled={activeStep === 0 || Object.values(loadingStates).some(state => state)}
+          >
+            Back
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleNext}
+            disabled={
+              activeStep === steps.length - 1 ||
+              !stepValidation[activeStep] ||
+              Object.values(loadingStates).some(state => state) ||
+              (activeStep === 0 && !isCustomerConfirmed)
+            }
+          >
+            {activeStep === steps.length - 2 ? 'Proceed to Payment' : 'Next'}
+          </Button>
+        </Box>
+      </Box>
+    </Container>
+  );
+});
+
+export default QuickOrderPanel;

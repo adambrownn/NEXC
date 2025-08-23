@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="750" height="471" viewBox="0 0 750 471" xmlns="http://www.w3.org/2000/svg">
+  <rect width="750" height="471" rx="40" fill="#fff" stroke="#E3E3E3" stroke-width="1"/>
+  <g transform="translate(150, 150)">
+    <rect x="0" y="0" width="450" height="180" rx="10" fill="#EB6F93"/>
+    <path d="M75,40 h300 v20 h-300 z" fill="#FFF"/>
+    <path d="M75,80 h300 v20 h-300 z" fill="#FFF"/>
+    <path d="M75,120 h300 v20 h-300 z" fill="#FFF"/>
+  </g>
+</svg>

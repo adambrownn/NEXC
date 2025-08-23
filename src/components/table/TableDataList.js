@@ -12,11 +12,10 @@ import {
   TableContainer,
   TablePagination,
   IconButton,
-} from "@material-ui/core";
-import {
-  Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
-} from "@material-ui/icons";
+} from "@mui/material";
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteIcon from '@mui/icons-material/Delete';
+
 // components
 import Page from "../Page";
 import Label from "../Label";
@@ -59,6 +58,10 @@ function getComparator(order, orderBy) {
 }
 
 function applySortFilter(array, comparator, query) {
+  if (!Array.isArray(array)) {
+    return [];
+  }
+  
   const stabilizedThis = array.map((el, index) => [el, index]);
   stabilizedThis.sort((a, b) => {
     const order = comparator(a[0], b[0]);
@@ -81,12 +84,16 @@ export default function TableDataList(props) {
   const [orderBy, setOrderBy] = useState("name");
   const [filterName, setFilterName] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(5);
-
-  const [ordersList, setOrdersList] = useState([]);
+  const [ordersList, setOrdersList] = useState([]);  
 
   const getOrders = async () => {
-    const resp = await axiosInstance.get("/orders");
-    setOrdersList(resp.data || []);
+    try {
+      const resp = await axiosInstance.get("/orders");
+      setOrdersList(Array.isArray(resp.data) ? resp.data : []);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      setOrdersList([]);
+    }
   };
 
   useEffect(() => {

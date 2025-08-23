@@ -2,14 +2,14 @@ import { motion } from "framer-motion";
 import { Icon } from "@iconify/react";
 import searchFill from "@iconify/icons-eva/search-fill";
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
+import { experimentalStyled as styled } from "@mui/material/styles";
 import {
   Box,
   alpha,
   Container,
   OutlinedInput,
   InputAdornment,
-} from "@material-ui/core";
+} from "@mui/material";
 //
 import { TextAnimate, varWrapEnter } from "../../animate";
 

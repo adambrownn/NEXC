@@ -27,6 +27,28 @@ module.exports.authenticateUser = async (req, res) => {
         break;
       }
 
+      // Add phone login case
+      case "phone": {
+        // Use phone as identifier if email isn't available
+        emailFromToken = reqObj.phone;
+        user = await userRepository.getUserByPhoneOnlyForLogin(reqObj.phone);
+        if (!user) {
+          throw new Error("Phone number doesn't exist. Please register.");
+        }
+        const isPasswordMatched = await bcrypt.compare(
+          reqObj.password,
+          user.password
+        );
+        if (!isPasswordMatched) {
+          throw new Error("Incorrect password.");
+        }
+        // If user has email, use that for token generation
+        if (user.email) {
+          emailFromToken = user.email;
+        }
+        break;
+      }
+
       case "google": {
         const googlePayload = await userService.verifyGoogleToken(
           reqObj.socialIdentityToken
@@ -45,10 +67,12 @@ module.exports.authenticateUser = async (req, res) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...userDetails } = user.toObject();
 
+    // Update token generation to include phone if available
     const { accessToken, refreshToken } = await authService.generateJwtToken({
       userId: userDetails._id,
       name: userDetails.name.toLowerCase(),
       email: userDetails?.email?.toLowerCase(),
+      phone: userDetails?.phoneNumber, // Add phone to token if available
       accountType: userDetails.accountType.toLowerCase(),
     });
 
@@ -60,6 +84,7 @@ module.exports.authenticateUser = async (req, res) => {
       user: {
         userId: userDetails.userId,
         email: userDetails.email,
+        phoneNumber: userDetails.phoneNumber, // Add phone to response
         name: userDetails.name,
         profileImage: userDetails.profileImage,
         accountType: userDetails.accountType,
@@ -137,7 +162,7 @@ module.exports.checkIsAdmin = async (req, res) => {
     res.json({
       isAdmin:
         userDetails.length &&
-        ["superadmin", "admin"].includes(userDetails[0]?.accountType)
+          ["superadmin", "admin"].includes(userDetails[0]?.accountType)
           ? true
           : false,
     });

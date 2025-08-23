@@ -1,34 +1,35 @@
 class CartBucketService {
-  async addItemToBucket(item) {
-    const items = (await JSON.parse(localStorage.getItem("cart"))) || [];
+  addItemToBucket(item) {
+    const items = JSON.parse(localStorage.getItem("cart")) || [];
     items.push(item);
     localStorage.setItem("cart", JSON.stringify(items));
     return true;
   }
 
-  async updateItems(items) {
+  updateItems(items) {
     localStorage.setItem("cart", JSON.stringify(items));
     return true;
   }
 
-  async getItemsFromBucket() {
-    return JSON.parse(localStorage.getItem("cart"));
+  getItemsFromBucket() {
+    return JSON.parse(localStorage.getItem("cart")) || [];
   }
 
-  async getItemsCount() {
+  getItemsCount() {
     const items = localStorage.getItem("cart");
-    if (items) {
-      return JSON.parse(items).length;
-    }
-    return 0;
+    return items ? JSON.parse(items).length : 0;
   }
 
-  async removeItemFromBucket(itemId) {
-    const items = await JSON.parse(localStorage.getItem("cart"));
+  removeItemFromBucket(itemId) {
+    const items = JSON.parse(localStorage.getItem("cart")) || [];
     const newItems = items.filter((item) => item._id !== itemId);
     localStorage.setItem("cart", JSON.stringify(newItems));
     return newItems;
   }
 }
 
-export default new CartBucketService();
+// Create an instance of the service
+const cartBucketService = new CartBucketService();
+
+// Export the instance
+export default cartBucketService;

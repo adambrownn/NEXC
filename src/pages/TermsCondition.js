@@ -1,6 +1,6 @@
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
-import { Divider } from "@material-ui/core";
+import { experimentalStyled as styled } from "@mui/material/styles";
+import { Divider } from "@mui/material";
 // components
 import Page from "../components/Page";
 const RootStyle = styled(Page)(({ theme }) => ({
@@ -26,10 +26,8 @@ export default function Tnc() {
       <Divider />
       <div style={{ marginBlock: 100 }}>
         <p>
-          The Construction Safety Line Limited Terms & Conditions are referred
-          to as Terms and Conditions ("Terms"). Company No. 07445228 (Registered
-          in England & Wales) Construction Safety Line Ltd. is a company that
-          assists individuals and companies to get the CSCS (Construction Skills
+          The NEXC Terms & Conditions are referred to as Terms and Conditions ("Terms"). Udhyam Reg. No. UP-17-0032727 (Registered
+          as MSME) NEXC. is a company that assists individuals and companies to get the CSCS (Construction Skills
           Certification Scheme) Cards as well as booking candidates for their
           Health Safety & Environmental qualifications in the construction
           industry.
@@ -39,13 +37,11 @@ export default function Tnc() {
         <br></br>
         <p>
           This website{" "}
-          <a href="https://constructionsafetyline.co.uk">
-            ("www.constructionsafetyline.co.uk")
+          <a href="https://nexc.co.uk">
+            ("www.nexc.co.uk")
           </a>{" "}
-          is owned and maintained by Construction Safety Line Limited. While
-          reading the terms "Construction Safety Line", "we", "us", "our" and
-          "ours" we are referring to Construction Safety Line Limited. While
-          reading the terms "you", "your" and "yours" we are referring to any
+          is owned and maintained by NEXC. While reading the terms "NEXC", "we", "us", "our" and
+          "ours" we are referring to NEXC. While reading the terms "you", "your" and "yours" we are referring to any
           visitor/user of this website and means any visitor/user of this
           website who wishes to purchase a product or service from the website.
           If you are working on behalf of a company, you affirm that you have
@@ -64,13 +60,11 @@ export default function Tnc() {
           information, products, and services made available via it. These terms
           and conditions are binding on any natural or legal person, company or
           partnership purchasing goods or services on one of our websites or
-          over the phone or making reservations through Construction Safety Line
-          Limited. By visiting this website, you agree to be bound by these
+          over the phone or making reservations through NEXC. By visiting this website, you agree to be bound by these
           terms and conditions, which constitute a legally binding agreement.
           These terms apply to authorized users of our website. If you do not
           agree to any of the terms, kindly exit the website. We reserve the
-          right to modify or change the terms of the Construction Safety Line at
-          any time. The new terms only apply to sales and contracts after the
+          right to modify or change the terms of the NEXC at any time. The new terms only apply to sales and contracts after the
           new rules take effect. The terms on our website when you place your
           order are the terms that apply to you. We do not sell products or
           services to persons under the age of 16. If you are under 16, you can
@@ -83,8 +77,8 @@ export default function Tnc() {
           the website. If you cannot access the terms and conditions on the
           webpage, we can provide a copy of the latest terms and conditions via
           email{" "}
-          <a href="mailto:support@constructionsafetyline.co.uk">
-            support@constructionsafetyline.co.uk
+          <a href="mailto:support@nexc.co.uk">
+            support@nexc.co.uk
           </a>{" "}
           upon request. If such access or use violates applicable laws or
           regulations, access to this website (or parts thereof) and use of any
@@ -97,7 +91,7 @@ export default function Tnc() {
         <p>
           According to these terms and conditions, any orders you place on the
           website and over the phone are subject to acceptance. By agreeing to
-          the terms and conditions, you authorize the Construction Safety Line
+          the terms and conditions, you authorize the NEXC
           limited to contact you and send you various offers via email, and you
           will receive emails related to their products, such as tests, cards,
           courses, etc., in a timely manner. All purchases/orders made over the
@@ -263,7 +257,7 @@ export default function Tnc() {
         <h3>Waiver Form -</h3>
         <p>
           You can call our customer service team on{" "}
-          <a href="+44 (0) 330 912 1773">+44 (0) 330 912 1773</a> to obtain the
+          <a href="+91 (0) 99717 14172">+91 (0) 99717 14172</a> to obtain the
           waiver form. It is your responsibility to get the form from us via
           email and to fill it out correctly. Please make sure your sponsor or
           doctor signs your form correctly and clearly states who they are? Your
@@ -388,8 +382,7 @@ export default function Tnc() {
         <br></br>
         <p>
           Rates or prices are only valid on the day you visit our website or the
-          day you call our contact center. The construction safety line limited
-          charges fees for its services, and we make test bookings on behalf of
+          day you call our contact center. The NEXC charges fees for its services, and we make test bookings on behalf of
           our applicants. This includes the one-time fee we charge you, the
           booking fee, and the processing fee for the booking.
         </p>
@@ -407,8 +400,7 @@ export default function Tnc() {
           confirmed cost of a product until you reached the "confirmed purchase"
           stage and have made a booking. we offer time-limited discounts and are
           depends on availability. as a consequence, the fee of such products
-          may additionally alternate on occasion. construction safety Line
-          accepts fees by means of credit/debit cards, bank transfers. We
+          may additionally alternate on occasion. NEXC accepts fees by means of credit/debit cards, bank transfers. We
           require a complete cleared fee before we book any test or confirm any
           purchase to you. Your money will be debited from your source after the
           "confirm and checkout" stage. If we're not able to deliver the product
@@ -434,10 +426,10 @@ export default function Tnc() {
         <p>
           If you like to reschedule the test or course, you must send us an
           email:{" "}
-          <a href="mailto:support@constructionsafetyline.co.uk">
-            support@constructionsafetyline.co.uk
+          <a href="mailto:support@nexc.co.uk">
+            support@nexc.co.uk
           </a>{" "}
-          or by calling us on +44 (0) 0330 912 1773, providing us with the Name
+          or by calling us on +91 (0) 99717 14172, providing us with the Name
           and Order ID. You must contact us at least 96 hours prior to your test
           timing for the test reschedule. In case you fail to contact us as set
           out above, you will be obliged to pay the full fee which includes any
@@ -449,7 +441,7 @@ export default function Tnc() {
         <p>
           This website may contain links to websites run by unrelated companies
           and individuals. A link to another website does not imply that
-          Construction Safety Line Limited approves, endorses, or accepts
+          NEXC Limited approves, endorses, or accepts
           responsibility for that website, its content, or use, or the products
           and services made available through such website. We are not
           responsible for the actions, content, accuracy, opinions expressed,
@@ -473,8 +465,7 @@ export default function Tnc() {
           Other website's links Any link to this Website that does not have our
           written permission is strictly prohibited. Regardless of whether you
           have permission to link to this Website, linking to any page other
-          than the Construction Safety Line Limited's initial start page is
-          prohibited. Individuals who provide access to this website via a link
+          than the NEXC's initial start page is prohibited. Individuals who provide access to this website via a link
           from another website are solely responsible for the content, accuracy,
           opinions expressed, privacy policies, products or services of, or
           available through, the source website, as well as any representations

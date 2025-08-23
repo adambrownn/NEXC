@@ -1,13 +1,13 @@
 import PropTypes from "prop-types";
 // material
-import { visuallyHidden } from "@material-ui/utils";
+import { visuallyHidden } from "@mui/utils";
 import {
   Box,
   TableRow,
   TableCell,
   TableHead,
   TableSortLabel,
-} from "@material-ui/core";
+} from "@mui/material";
 
 TableHeadData.propTypes = {
   order: PropTypes.oneOf(["asc", "desc"]),

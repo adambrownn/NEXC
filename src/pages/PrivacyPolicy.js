@@ -1,6 +1,6 @@
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
-import { Divider } from "@material-ui/core";
+import { experimentalStyled as styled } from "@mui/material/styles";
+import { Divider } from "@mui/material";
 // components
 import Page from "../components/Page";
 const RootStyle = styled(Page)(({ theme }) => ({
@@ -23,18 +23,18 @@ export default function PrivacyPolicy() {
       <h1 style={{ textAlign: "center", fontSize: 40 }}>Privacy Policy</h1>
       <Divider />
       <div style={{ marginBlock: 100 }}>
-        Construction Safety Line Privacy statement. Company Number 13546291
+        NEXC Privacy statement. Company Number 13546291
         (Registered in England {"&"} Wales).
-        <h1>Privacy Policy for Construction Safety Line Limited</h1>
-        At Construction Safety Line, accessible from
-        www.constructionsafetyline.co.uk, one of our main priorities is the
+        <h1>Privacy Policy for NEXC</h1>
+        At NEXC, accessible from
+        www.nexc.co.uk, one of our main priorities is the
         privacy of our visitors. This Privacy Policy document contains types of
-        information that is collected and recorded by Construction Safety Line
+        information that is collected and recorded by NEXC
         and how we use it. If you have additional questions or require more
         information about our Privacy Policy, do not hesitate to contact us.
         This Privacy Policy applies only to our online activities and is valid
         for visitors to our website with regards to the information that they
-        shared and/or collect in Construction Safety Line. This policy is not
+        shared and/or collect in NEXC. This policy is not
         applicable to any information collected offline or via channels other
         than this website.
         <h2>Consent</h2>
@@ -71,7 +71,7 @@ export default function PrivacyPolicy() {
           <li>Find and prevent fraud</li>
         </ul>
         <h2>Log Files</h2>
-        Construction Safety Line follows a standard procedure of using log
+        NEXC follows a standard procedure of using log
         files. These files log visitors when they visit websites. All hosting
         companies do this and are a part of hosting services' analytics. The
         information collected by log files includes internet protocol (IP)
@@ -82,14 +82,14 @@ export default function PrivacyPolicy() {
         site, tracking users' movement on the website, and gathering demographic
         information.
         <h2>Cookies and Web Beacons</h2>
-        Like any other website, Construction Safety Line uses cookies. These
+        Like any other website, NEXC uses cookies. These
         cookies are used to store information including visitors' preferences,
         and the pages on the website that the visitor accessed or visited. The
         information is used to optimize the users' experience by customizing our
         web page content based on visitors' browser type and/or other
         information.
         <h2>Third Party Privacy Policies</h2>
-        Construction Safety Line's Privacy Policy does not apply to other
+        NEXC's Privacy Policy does not apply to other
         advertisers or websites. Thus, we are advising you to consult the
         respective Privacy Policies of these third-party ad servers for more
         detailed information. It may include their practices and instructions
@@ -123,23 +123,22 @@ export default function PrivacyPolicy() {
         a request, we have one month to respond to you. If you would like to
         exercise any of these rights, please contact us.
         <h2>Services on a global scale</h2>
-        Construction Safety Line may store, transfer, and process your
+        NEXC may store, transfer, and process your
         information with service providers in Europe, India, Asia Pacific, and
         North and South America to facilitate our overseas operations
         <h2>Children's Information</h2>
         Another part of our priority is adding protection for children while
         using the internet. We encourage parents and guardians to observe,
         participate in, and/or monitor and guide their online activity.
-        Construction Safety Line does not knowingly collect any Personal
+        NEXC does not knowingly collect any Personal
         Identifiable Information from children under the age of 16. If you think
         that your child provided this kind of information on our website, we
         strongly encourage you to contact us immediately and we will do our best
         efforts to promptly remove such information from our records. Contact
         Us: Please contact us for any questions or complaints about this Privacy
-        Policy or Construction Safety Line's information handling practices, you
-        may email us or contact us at: Construction Safety Line Ltd, 71-75
-        Shelton Street Covent Garden London WC2H 9JQ email:
-        support@constructionsafetyline.co.uk
+        Policy or NEXC's information handling practices, you
+        may email us or contact us at: NEXC, Barampur, UP, 246731 email:
+        support@nexc.co.uk
       </div>
     </RootStyle>
   );

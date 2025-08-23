@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 // material
-import { Box } from "@material-ui/core";
+import { Box } from "@mui/material";
 import CSLlogo1 from "../assets/logos/CSLlogo1.png";
 
 // ----------------------------------------------------------------------

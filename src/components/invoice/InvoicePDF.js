@@ -228,13 +228,12 @@ export default function InvoicePDF({ invoice }) {
           <View style={styles.col8}>
             <Text style={styles.subtitle2}>Company Number: 13546291</Text>
             <Text>
-              71 - 75, Shelton Street, Covent Garden London WC2H 9JQ UNITED
-              KINGDOM
+              Barampur, UP, 246731
             </Text>
           </View>
           <View style={[styles.col4, styles.alignRight]}>
             <Text style={styles.subtitle2}>Have a Question?</Text>
-            <Text>support@constructionsafetyline.co.uk</Text>
+            <Text>support@nexc.co.uk</Text>
           </View>
         </View>
       </Page>

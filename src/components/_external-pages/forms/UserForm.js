@@ -10,9 +10,9 @@ import {
   Button,
   Dialog,
   DialogActions,
-} from "@material-ui/core";
+} from "@mui/material";
 import validator from "validator";
-import { LoadingButton } from "@material-ui/lab";
+import { LoadingButton } from "@mui/lab";
 import UserService from "../../../services/user";
 import AxiosInstance from "../../../axiosConfig";
 

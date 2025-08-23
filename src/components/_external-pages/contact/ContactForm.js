@@ -1,5 +1,5 @@
 // material
-import { Button, Typography, TextField, Stack } from "@material-ui/core";
+import { Button, Typography, TextField, Stack } from "@mui/material";
 import { useState } from "react";
 import axiosInstance from "../../../axiosConfig";
 //

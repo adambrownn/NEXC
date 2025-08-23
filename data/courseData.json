@@ -1,0 +1,386 @@
+[
+    {
+        "Title": "Director's Role for Health and Safety",
+        "Description": "CITB Director's Role for Health and Safety (DRHS)",
+        "Category": "CITB",
+        "Price": 457,
+        "Validity": "5 Y",
+        "Duration": " 1 Day"
+    },
+    {
+        "Title": "Health and Safety Awareness",
+        "Description": "CITB Health and Safety Awareness (HSA)",
+        "Category": "CITB",
+        "Price": 457,
+        "Validity": "6 Y",
+        "Duration": " 2 Day"
+    },
+    {
+        "Title": "Site Environmental Awareness Training Scheme",
+        "Description": "CITB Site Environmental Awareness Training Scheme (SEATS)",
+        "Category": "CITB",
+        "Price": 457,
+        "Validity": "7 Y",
+        "Duration": " 3 Day"
+    },
+    {
+        "Title": "Site Management Safety Training Scheme",
+        "Description": "CITB Site Management Safety Training Scheme (SMSTS)",
+        "Category": "CITB",
+        "Price": 457,
+        "Validity": "8 Y",
+        "Duration": " 4 Day"
+    },
+    {
+        "Title": "Site Management Safety Training Scheme Refresher",
+        "Description": "CITB Site Management Safety Training Scheme Refresher (SMSTS-R)",
+        "Category": "CITB",
+        "Price": 457,
+        "Validity": "9 Y",
+        "Duration": " 5 Day"
+    },
+    {
+        "Title": "Site Supervision Safety Training Scheme",
+        "Description": "CITB Site Supervision Safety Training Scheme (SSSTS)",
+        "Category": "CITB",
+        "Price": 457,
+        "Validity": "10 Y",
+        "Duration": " 6 Day"
+    },
+    {
+        "Title": "Site Supervision Safety Training Scheme Refresher",
+        "Description": "CITB Site Supervision Safety Training Scheme Refresher (SSSTS-R)",
+        "Category": "CITB",
+        "Price": 457,
+        "Validity": "11 Y",
+        "Duration": " 7 Day"
+    },
+    {
+        "Title": "Temporary Works Co-ordinator Training Course",
+        "Description": "CITB Temporary Works Co-ordinator Training Course (TWCTC)",
+        "Category": "CITB",
+        "Price": 457,
+        "Validity": "12 Y",
+        "Duration": " 8 Day"
+    },
+    {
+        "Title": "Temporary Works General Awareness Training Course",
+        "Description": "CITB Temporary Works General Awareness Training Course (TWGATC)",
+        "Category": "CITB",
+        "Price": 457,
+        "Validity": "13 Y",
+        "Duration": " 9 Day"
+    },
+    {
+        "Title": "Temporary Works Supervisor Training Course",
+        "Description": "CITB Temporary Works Supervisor Training Course (TWSTC)",
+        "Category": "CITB",
+        "Price": 457,
+        "Validity": "14 Y",
+        "Duration": " 10 Day"
+    },
+    {
+        "Title": "Tunnelling Safety Training Scheme",
+        "Description": "CITB Tunnelling Safety Training Scheme (TSTS)",
+        "Category": "CITB",
+        "Price": 457,
+        "Validity": "15 Y",
+        "Duration": " 11 Day"
+    },
+    {
+        "Title": "COTS Course",
+        "Description": "CISRS Operative Training Scheme (COTS) Course",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "16 Y",
+        "Duration": " 12 Day"
+    },
+    {
+        "Title": "BASE Course",
+        "Description": "CISRS Basic Access System Erector (BASE) Course",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "17 Y",
+        "Duration": " 13 Day"
+    },
+    {
+        "Title": "System Scaffold Training",
+        "Description": "CISRS System Scaffold Product Training Scheme (SSPTS)",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "18 Y",
+        "Duration": " 14 Day"
+    },
+    {
+        "Title": "Scaffold Part 1 Course",
+        "Description": "CISRS Scaffolding Part 1: Tube and Fitting or System Scaffold",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "19 Y",
+        "Duration": " 15 Day"
+    },
+    {
+        "Title": "Scaffold Part 2 Course",
+        "Description": "CISRS Scaffolding Part 2: Tube and Fitting or System Scaffold",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "20 Y",
+        "Duration": " 16 Day"
+    },
+    {
+        "Title": "NVQ Level 2/SCQF Level 5",
+        "Description": "NVQ Level 2/SCQF Level 5 in Accessing Operations and Rigging \u2013 Scaffolding",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "21 Y",
+        "Duration": " 17 Day"
+    },
+    {
+        "Title": "Level 2 Practical Skills Test",
+        "Description": "CISRS Level 2 Practical Skills Assessment/ 1 Day Skills Test",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "22 Y",
+        "Duration": " 18 Day"
+    },
+    {
+        "Title": "Scaffolder Refresher Course",
+        "Description": "Scaffolder Refresher Continuous professional development (CPD) Course",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "23 Y",
+        "Duration": " 19 Day"
+    },
+    {
+        "Title": "Experienced Worker Practical Assessment",
+        "Description": "CISRS Experienced Worker Practical Assessment (EWPA)",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "24 Y",
+        "Duration": " 20 Day"
+    },
+    {
+        "Title": "Advanced Scaffolder Course",
+        "Description": "CISRS Advanced Scaffolder Course \u2013 Tube and Fitting",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "25 Y",
+        "Duration": " 21 Day"
+    },
+    {
+        "Title": "NVQ Level 3/SCQF Level 6",
+        "Description": "NVQ Level 3/SCQF Level 6 in Accessing Operations and Rigging \u2013 Scaffolding",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "26 Y",
+        "Duration": " 22 Day"
+    },
+    {
+        "Title": "Level 3 Practical Skills Test",
+        "Description": "CISRS Level 3 Practical Skills Assessment/ 2 Day Skills Test",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "27 Y",
+        "Duration": " 23 Day"
+    },
+    {
+        "Title": "Scaffolding Supervisor/Manager Course ",
+        "Description": "CISRS Scaffolding Management & Supervisory Training",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "28 Y",
+        "Duration": " 24 Day"
+    },
+    {
+        "Title": "Scaffold Inspection Training",
+        "Description": "CISRS Scaffolding Inspection Training Scheme (SITS)",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "29 Y",
+        "Duration": " 25 Day"
+    },
+    {
+        "Title": "Advanced Scaffold Inspection Training",
+        "Description": "CISRS Advanced Scaffolding Inspection Training Scheme (SITS)",
+        "Category": "Scaffolding",
+        "Price": 457,
+        "Validity": "30 Y",
+        "Duration": " 26 Day"
+    },
+    {
+        "Title": "Standard Theory Test",
+        "Description": "CPCS Standard Theory Test",
+        "Category": "Plant Operations",
+        "Price": 457,
+        "Validity": "31 Y",
+        "Duration": " 27 Day"
+    },
+    {
+        "Title": "Advanced Theory Test",
+        "Description": "CPCS Advanced Theory Test",
+        "Category": "Plant Operations",
+        "Price": 457,
+        "Validity": "32 Y",
+        "Duration": " 28 Day"
+    },
+    {
+        "Title": "Standard Practical Test",
+        "Description": "CPCS Standard Practical Test",
+        "Category": "Plant Operations",
+        "Price": 457,
+        "Validity": "33 Y",
+        "Duration": " 29 Day"
+    },
+    {
+        "Title": "Advanced Practical Test",
+        "Description": "CPCS Advanced Practical Test",
+        "Category": "Plant Operations",
+        "Price": 457,
+        "Validity": "34 Y",
+        "Duration": " 30 Day"
+    },
+    {
+        "Title": "Level 1 Award in Construction",
+        "Description": "Level 1 Award In Health and Safety in a Construction Environment",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "35 Y",
+        "Duration": " 31 Day"
+    },
+    {
+        "Title": "Preperation for HSE Test",
+        "Description": "Preperation Course of CITB Health, Safety & Environment Test",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "36 Y",
+        "Duration": " 32 Day"
+    },
+    {
+        "Title": "Asbestos Awarness",
+        "Description": "Asbestos Awareness Online Training",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "37 Y",
+        "Duration": " 33 Day"
+    },
+    {
+        "Title": "Asbestos Awareness for Architects and Designers",
+        "Description": "Asbestos Awareness for Architects and Designers Online Training",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "38 Y",
+        "Duration": " 34 Day"
+    },
+    {
+        "Title": "CDM Awareness",
+        "Description": "CDM Awareness E-Learning",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "39 Y",
+        "Duration": " 35 Day"
+    },
+    {
+        "Title": "Working in Confined Spaces",
+        "Description": "Working in Confined Spaces \u2013 Online Course",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "40 Y",
+        "Duration": " 36 Day"
+    },
+    {
+        "Title": "Working Safely",
+        "Description": "Working Safely E-Learning",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "41 Y",
+        "Duration": " 37 Day"
+    },
+    {
+        "Title": "Abrasive Wheels",
+        "Description": "Abrasive Wheels - Online Course",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "42 Y",
+        "Duration": " 38 Day"
+    },
+    {
+        "Title": "Slips, Trips and Falls",
+        "Description": "Slips, Trips and Falls - Online Training",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "43 Y",
+        "Duration": " 39 Day"
+    },
+    {
+        "Title": "Control of Substances Hazardous to Health",
+        "Description": "Control of Substances Hazardous to Health (COSHH) E-Learning",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "44 Y",
+        "Duration": " 40 Day"
+    },
+    {
+        "Title": "Electrical Safety",
+        "Description": "Electrical Safety E-Learning",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "45 Y",
+        "Duration": " 41 Day"
+    },
+    {
+        "Title": "Working at Height Awareness",
+        "Description": "Working at Height Awareness - Online Course",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "46 Y",
+        "Duration": " 42 Day"
+    },
+    {
+        "Title": "Personal Protective Equipment",
+        "Description": "Personal Protective Equipment - Online Course",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "47 Y",
+        "Duration": " 43 Day"
+    },
+    {
+        "Title": "Emergency First Aid at Work",
+        "Description": "Emergency First Aid at Work - Online Annual Refresher Course",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "48 Y",
+        "Duration": " 44 Day"
+    },
+    {
+        "Title": "Manual Handling",
+        "Description": "Manual Handling - Online Course",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "49 Y",
+        "Duration": " 45 Day"
+    },
+    {
+        "Title": "Noise Awareness",
+        "Description": "Noise Awareness - Online Course",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "50 Y",
+        "Duration": " 46 Day"
+    },
+    {
+        "Title": "Basic Fire Safety Awareness",
+        "Description": "Basic Fire Safety Awareness - Online Course",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "51 Y",
+        "Duration": " 47 Day"
+    },
+    {
+        "Title": "Fire Marshal",
+        "Description": "Fire Marshal \u2013 Online Training",
+        "Category": "Health and Safety",
+        "Price": 457,
+        "Validity": "52 Y",
+        "Duration": " 48 Day"
+    }
+]

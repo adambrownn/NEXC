@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
-import { Box, Container, Typography } from "@material-ui/core";
+import { experimentalStyled as styled } from "@mui/material/styles";
+import { Box, Container, Typography } from "@mui/material";
 //
 import { varWrapEnter, TextAnimate } from "../../animate";
 

@@ -1,13 +1,14 @@
 import { Icon } from "@iconify/react";
 import searchFill from "@iconify/icons-eva/search-fill";
 // material
-import { styled, alpha } from "@material-ui/core/styles";
+import { styled, alpha } from "@mui/material/styles";
 import {
   Box,
   Input,
   InputAdornment,
   ClickAwayListener,
-} from "@material-ui/core";
+} from "@mui/material";
+
 
 // ----------------------------------------------------------------------
 
@@ -34,10 +35,12 @@ const SearchbarStyle = styled("div")(({ theme }) => ({
 // ----------------------------------------------------------------------
 
 export default function Searchbar({ handFilterByTitle }) {
+  const handleClose = () => {
+    // Implement what should happen when clicking away
+    // For example, you might want to clear the search or close the searchbar
+  };
   return (
-    <ClickAwayListener
-    // onClickAway={handleClose}
-    >
+     <ClickAwayListener onClickAway={handleClose}>
       <div>
         <SearchbarStyle>
           <Input

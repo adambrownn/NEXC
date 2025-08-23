@@ -2,8 +2,8 @@ import PropTypes from "prop-types";
 import { useEffect } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
-import { Box, Link, Drawer, Typography } from "@material-ui/core";
+import { experimentalStyled as styled } from "@mui/material/styles";
+import { Box, Link, Drawer, Typography } from "@mui/material";
 
 import { PATH_DASHBOARD } from "../../routes/paths";
 // components

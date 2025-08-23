@@ -3,8 +3,8 @@ import { Icon } from "@iconify/react";
 import downloadFill from "@iconify/icons-eva/download-fill";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 // material
-import { Stack } from "@material-ui/core";
-import { LoadingButton } from "@material-ui/lab";
+import { Stack } from "@mui/material";
+import { LoadingButton } from "@mui/lab";
 //
 import InvoicePDF from "./InvoicePDF";
 

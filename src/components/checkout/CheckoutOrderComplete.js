@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import filePdfFilled from "@iconify/icons-ant-design/file-pdf-filled";
 import arrowIosBackFill from "@iconify/icons-eva/arrow-ios-back-fill";
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
-import { Box, Button, Divider, Typography, Stack } from "@material-ui/core";
+import { experimentalStyled as styled } from "@mui/material/styles";
+import { Box, Button, Divider, Typography, Stack } from "@mui/material";
 //
 import { DialogAnimate } from "../animate";
 import { OrderCompleteIllustration } from "../../assets";

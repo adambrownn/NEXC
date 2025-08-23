@@ -51,7 +51,7 @@ export default function Router() {
       children: [
         { path: "", element: <Navigate to="/dashboard/booked" replace /> },
         { path: "admin", element: <Navigate to="/dashboard/booked" replace /> },
-        { path: "reserved", element: <ReservedOrders /> },
+        { path: "sales", element: <SalesPortal /> },
         { path: "booked", element: <BookedOrders /> },
         { path: "applications", element: <Applications /> },
         { path: "users", element: <Accounts /> },
@@ -59,6 +59,10 @@ export default function Router() {
         {
           path: "trades",
           element: <Trades />,
+        },
+        {
+          path: "trades/service-associations",
+          element: <TradeServiceAssociations />,
         },
         {
           path: "cards",
@@ -104,6 +108,11 @@ export default function Router() {
           ],
         },
         { path: "faqs", element: <FAQCard /> },
+        { path: "blog", element: <Blog /> },
+
+        { path: "service", element: <ServicePortal /> },
+        { path: "calls", element: <CallManagement /> },
+        { path: "service/chat", element: <ChatManagement /> }
       ],
     },
 
@@ -129,13 +138,16 @@ export default function Router() {
       element: <MainLayout />,
       children: [
         { path: "", element: <LandingPage /> },
+        { path: "checkout", element: <Checkout /> },
         { path: "qualifications", element: <QualificationsPage /> },
         { path: "about-us", element: <About /> },
         { path: "contact-us", element: <Contact /> },
+        { path: "blog", element: <Blog /> },
         { path: "privacy-policy", element: <PrivacyPolicy /> },
         { path: "terms-condition", element: <Tnc /> },
         { path: "faqs", element: <Faqs /> },
         { path: "policies", element: <Policies /> },
+        { path: "customer/profile", element: <CustomerProfile /> }
       ],
     },
     {
@@ -154,67 +166,51 @@ export default function Router() {
 
 // Authentication
 const Login = Loadable(lazy(() => import("../pages/authentication/Login")));
-const Register = Loadable(
-  lazy(() => import("../pages/authentication/Register"))
-);
-const ResetPassword = Loadable(
-  lazy(() => import("../pages/authentication/ResetPassword"))
-);
-const VerifyCode = Loadable(
-  lazy(() => import("../pages/authentication/VerifyCode"))
-);
+const Register = Loadable(lazy(() => import("../pages/authentication/Register")));
+const ResetPassword = Loadable(lazy(() => import("../pages/authentication/ResetPassword")));
+const VerifyCode = Loadable(lazy(() => import("../pages/authentication/VerifyCode")));
 
-const Trades = Loadable(lazy(() => import("../pages/dashboard/trades")));
-
-const CardsList = Loadable(lazy(() => import("../pages/dashboard/cards")));
-const CardCreate = Loadable(
-  lazy(() => import("../pages/dashboard/cards/Create"))
-);
-
-const Tests = Loadable(lazy(() => import("../pages/dashboard/tests")));
-const CreateTest = Loadable(
-  lazy(() => import("../pages/dashboard/tests/create"))
-);
-
-const CoursesList = Loadable(lazy(() => import("../pages/dashboard/courses")));
-const CoursesCreate = Loadable(
-  lazy(() => import("../pages/dashboard/courses/create"))
-);
-
-const CentersList = Loadable(lazy(() => import("../pages/dashboard/centers")));
-const CentersCreate = Loadable(
-  lazy(() => import("../pages/dashboard/centers/create"))
-);
-
-const Qualifications = Loadable(
-  lazy(() => import("../pages/dashboard/qualifications"))
-);
-const CreateQualification = Loadable(
-  lazy(() => import("../pages/dashboard/qualifications/create"))
-);
-
-const FAQCard = Loadable(lazy(() => import("../pages/dashboard/faqs")));
-
+// Dashboard
 const BookedOrders = Loadable(lazy(() => import("../pages/BookedOrders")));
 const Applications = Loadable(lazy(() => import("../pages/Applications")));
 const Accounts = Loadable(lazy(() => import("../pages/Accounts")));
-const ReservedOrders = Loadable(lazy(() => import("../pages/ReservedOrders")));
-const NotFound = Loadable(lazy(() => import("../pages/Page404")));
-const Page500 = Loadable(lazy(() => import("../pages/Page500")));
+const SalesPortal = Loadable(lazy(() => import("../pages/dashboard/sales/SalesPortal")));
 
+// Service Management
+const ServicePortal = Loadable(lazy(() => import("../pages/dashboard/service/ServicePortal")));
+const CallManagement = Loadable(lazy(() => import("../pages/dashboard/service/CallManagement")));
+const ChatManagement = Loadable(lazy(() => import("../pages/dashboard/service/ChatManagement")));
+
+// Management
+const Trades = Loadable(lazy(() => import("../pages/dashboard/trades")));
+const CardsList = Loadable(lazy(() => import("../pages/dashboard/cards")));
+const CardCreate = Loadable(lazy(() => import("../pages/dashboard/cards/Create")));
+const Tests = Loadable(lazy(() => import("../pages/dashboard/tests")));
+const CreateTest = Loadable(lazy(() => import("../pages/dashboard/tests/create")));
+const CoursesList = Loadable(lazy(() => import("../pages/dashboard/courses")));
+const CoursesCreate = Loadable(lazy(() => import("../pages/dashboard/courses/create")));
+const CentersList = Loadable(lazy(() => import("../pages/dashboard/centers")));
+const CentersCreate = Loadable(lazy(() => import("../pages/dashboard/centers/create")));
+const Qualifications = Loadable(lazy(() => import("../pages/dashboard/qualifications")));
+const CreateQualification = Loadable(lazy(() => import("../pages/dashboard/qualifications/create")));
+const FAQCard = Loadable(lazy(() => import("../pages/dashboard/faqs")));
+
+// Blog
+const Blog = Loadable(lazy(() => import("../pages/Blog")));
+
+// Main Pages
 const LandingPage = Loadable(lazy(() => import("../pages/LandingPage")));
 const TradesOverview = Loadable(lazy(() => import("../pages/Trades")));
-
-const QualificationsPage = Loadable(
-  lazy(() => import("../pages/Qualifications"))
-);
-const EcommerceInvoice = Loadable(
-  lazy(() => import("../pages/EcommerceInvoice"))
-);
-
+const QualificationsPage = Loadable(lazy(() => import("../pages/Qualifications")));
+const EcommerceInvoice = Loadable(lazy(() => import("../pages/EcommerceInvoice")));
 const About = Loadable(lazy(() => import("../pages/About")));
 const PrivacyPolicy = Loadable(lazy(() => import("../pages/PrivacyPolicy")));
 const Tnc = Loadable(lazy(() => import("../pages/TermsCondition")));
 const Contact = Loadable(lazy(() => import("../pages/Contact")));
 const Faqs = Loadable(lazy(() => import("../pages/Faqs")));
 const Policies = Loadable(lazy(() => import("../pages/Policies")));
+const TradeServiceAssociations = Loadable(lazy(() => import("../pages/dashboard/trades/TradeServiceAssociations")));
+const NotFound = Loadable(lazy(() => import("../pages/Page404")));
+const Page500 = Loadable(lazy(() => import("../pages/Page500")));
+const CustomerProfile = Loadable(lazy(() => import("../pages/customer/Profile")));
+const Checkout = Loadable(lazy(() => import("../pages/Checkout")));

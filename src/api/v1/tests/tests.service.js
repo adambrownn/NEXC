@@ -23,6 +23,9 @@ module.exports.getTests = async (req, res) => {
   if (req.query.tradeId) {
     filterCriteria.tradeId = req.query.tradeId;
   }
+  if (req.query.category) {
+      filterCriteria.category = req.query.category;
+    }
   const testsList = await testRepository.getTests(filterCriteria);
   res.json(testsList);
 };

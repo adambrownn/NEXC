@@ -6,7 +6,7 @@ import {
   Divider,
   Typography,
   useTheme,
-} from "@material-ui/core";
+} from "@mui/material";
 
 const SubCard = (props) => {
   const theme = useTheme();

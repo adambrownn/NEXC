@@ -1,27 +1,25 @@
-import { useEffect, useState } from "react";
-// material
-import { Card, Stack } from "@material-ui/core";
-
-// routes
+import React, { useEffect, useState } from "react";
+import { Card, Stack } from "@mui/material";
 import CenterDatalist from "../../CenterLocation";
 
 export default function TestCenter(props) {
-  const [testCenter, setTestCenter] = useState({});
+  const [testCenter, setTestCenter] = useState(null);
 
   useEffect(() => {
-    (async () => {
-      setTestCenter(
-        (await JSON.parse(localStorage.getItem("testCenter"))) || {}
-      );
-    })();
-  }, [props]);
+    const storedCenter = JSON.parse(localStorage.getItem("testCenter"));
+    if (storedCenter && storedCenter.id) {
+      setTestCenter(storedCenter);
+    } else {
+      setTestCenter(null);
+    }
+  }, []);
 
   const handleSelectCenter = (e, center) => {
     if (center) {
       setTestCenter(center);
       localStorage.setItem("testCenter", JSON.stringify(center));
     } else {
-      setTestCenter({});
+      setTestCenter(null);
       localStorage.removeItem("testCenter");
     }
   };
@@ -29,26 +27,12 @@ export default function TestCenter(props) {
   return (
     <div>
       <Card sx={{ p: 3, m: 2 }}>
-        <Stack fullwidth direction={{ xs: "column", sm: "row" }}>
+        <Stack width="100%" direction={{ xs: "column", sm: "row" }}>
           <CenterDatalist
             handleSelectCenter={handleSelectCenter}
             testCenter={testCenter}
           />
         </Stack>
-
-        {/* <Stack direction={{ xs: "column", sm: "row" }}>
-          {Object.entries(testCenter).length > 0 && (
-            <>
-              <CardContent>
-                <Typography variant="subtitle2" gutterBottom>
-                  <Typography component="span" variant="h6">
-                    {testCenter.title}
-                  </Typography>
-                </Typography>
-              </CardContent>
-            </>
-          )}
-        </Stack> */}
       </Card>
     </div>
   );

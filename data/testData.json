@@ -1,0 +1,122 @@
+[
+  {
+    "Title": "HSE Operatives Test",
+    "Description": "CITB Health, Safety & Environment Operatives Test",
+    "Price": 44.99,
+    "Category": "Operative",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Test Managers and Professionals Test",
+    "Description": "CITB Health, Safety & Environment Managers and Professionals Test",
+    "Price": 44.99,
+    "Category": "Managers and Professionals",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Supervisory Test",
+    "Description": "CITB Health, Safety & Environment Supervisory (SUP) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Demolition Test",
+    "Description": "CITB Health, Safety & Environment Demolition (DEM) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Plumbing Test",
+    "Description": "CITB Health, Safety & Environment Plumbing (JIB) (PLUM) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Highway Works Test",
+    "Description": "CITB Health, Safety & Environment Highway Works (HIW) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Specialist Work at Height Test",
+    "Description": "CITB Health, Safety & Environment Work at Height (WAH) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Lifts and Escalators Test",
+    "Description": "CITB Health, Safety & Environment Lifts and Escalators (LAEE) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Tunnelling Test",
+    "Description": "CITB Health, Safety & Environment Tunnelling (TUNN) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Heating and Plumbing Services Test",
+    "Description": "CITB Health, Safety & Environment HVACR Heating and Plumbing Services (HAPS) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Pipefitting and Welding Test",
+    "Description": "CITB Health, Safety & Environment HVACR Pipefitting and Welding (PFW) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Ductwork Test",
+    "Description": "CITB Health, Safety & Environment HVACR Ductwork (DUCT) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Refrigeration and Air Conditioning Test",
+    "Description": "CITB Health, Safety & Environment HVACR Refrigeration and Air Conditioning (RAAC) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "HSE Services and Facilities Maintenance Test",
+    "Description": "CITB Health, Safety & Environment HVACE Services and Facilities Maintenance (SAF) Test",
+    "Price": 44.99,
+    "Category": "Specialists",
+    "Validity": "2 Y",
+    "Duration": "45 Minutes"
+  },
+  {
+    "Title": "CPCS Renewal Test",
+    "Description": "NOCN Group CPCS Renewal Test",
+    "Price": 54.99,
+    "Category": "CPCS Renewal",
+    "Validity": "2 Y",
+    "Duration": "15 Minutes"
+  }
+]

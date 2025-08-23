@@ -1,4 +1,4 @@
-import { Container, Typography } from "@material-ui/core";
+import { Container, Typography } from "@mui/material";
 
 export default function AboutTeam() {
   return (
@@ -22,7 +22,7 @@ export default function AboutTeam() {
             theme.palette.mode === "light" ? "text.secondary" : "common.white",
         }}
       >
-        Construction safety line will provide you support with every services we
+        NEXC will provide you support with every services we
         offer and with products you are interested in. We reply within a day and
         we also have proper documentations.
       </Typography>

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Box, Typography, Container } from "@material-ui/core";
+import { Box, Typography, Container } from "@mui/material";
 // components
 import { MotionContainer, varBounceIn } from "../components/animate";
 
@@ -14,7 +14,7 @@ export default function NothingHere() {
             </Typography>
           </motion.div>
           <Typography sx={{ color: "text.secondary" }}>
-            Give us a call if assistance required: ++44(0)330 912 1773
+            Give us a call if assistance required: ++91 (0)99717 14172
           </Typography>
           <Typography sx={{ color: "text.secondary" }}>
             Please try again with desired information.

@@ -1,0 +1,136 @@
+/**
+ * Payment Icons Sprite Sheet CSS
+ * This file defines the CSS classes for the payment icon sprite sheet
+ */
+
+.payment-icon {
+  display: inline-block;
+  background-image: url('./payment-sprite.svg');
+  background-repeat: no-repeat;
+  background-size: 800px 200px;
+  vertical-align: middle;
+}
+
+/* Card brands */
+.payment-icon-visa {
+  background-position: 0 0;
+  width: 60px;
+  height: 40px;
+}
+
+.payment-icon-mastercard {
+  background-position: -70px 0;
+  width: 60px;
+  height: 40px;
+}
+
+.payment-icon-amex {
+  background-position: -140px 0;
+  width: 60px;
+  height: 40px;
+}
+
+.payment-icon-discover {
+  background-position: -210px 0;
+  width: 60px;
+  height: 40px;
+}
+
+.payment-icon-maestro {
+  background-position: -280px 0;
+  width: 60px;
+  height: 40px;
+}
+
+/* Payment methods */
+.payment-icon-paypal {
+  background-position: 0 -50px;
+  width: 80px;
+  height: 40px;
+}
+
+.payment-icon-apple-pay {
+  background-position: -90px -50px;
+  width: 80px;
+  height: 40px;
+}
+
+.payment-icon-google-pay {
+  background-position: -180px -50px;
+  width: 80px;
+  height: 40px;
+}
+
+.payment-icon-ideal {
+  background-position: -270px -50px;
+  width: 60px;
+  height: 40px;
+}
+
+.payment-icon-sepa {
+  background-position: -340px -50px;
+  width: 60px;
+  height: 40px;
+}
+
+.payment-icon-sofort {
+  background-position: -410px -50px;
+  width: 60px;
+  height: 40px;
+}
+
+.payment-icon-klarna {
+  background-position: -480px -50px;
+  width: 60px;
+  height: 40px;
+}
+
+.payment-icon-bancontact {
+  background-position: -550px -50px;
+  width: 60px;
+  height: 40px;
+}
+
+.payment-icon-amazon {
+  background-position: -620px -50px;
+  width: 60px;
+  height: 40px;
+}
+
+.payment-icon-generic-card {
+  background-position: -690px -50px;
+  width: 60px;
+  height: 40px;
+}
+
+/* Security icons */
+.payment-icon-secure {
+  background-position: 0 -100px;
+  width: 40px;
+  height: 40px;
+}
+
+.payment-icon-protected {
+  background-position: -50px -100px;
+  width: 40px;
+  height: 40px;
+}
+
+.payment-icon-verified {
+  background-position: -100px -100px;
+  width: 40px;
+  height: 40px;
+}
+
+/* Responsive sizing classes */
+.payment-icon-sm {
+  transform: scale(0.75);
+}
+
+.payment-icon-lg {
+  transform: scale(1.25);
+}
+
+.payment-icon-xl {
+  transform: scale(1.5);
+}

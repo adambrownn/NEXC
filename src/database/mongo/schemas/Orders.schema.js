@@ -12,18 +12,113 @@ const itemsSchema = mongoose.Schema({
     title: { type: String },
   },
   validity: { type: String },
-  newRenew: { type: String, default: "new" },
-  // for tests only
-  citbTestId: { type: String },
-  testDate: { type: String },
-  testTime: { type: String },
-  voiceover: { type: String },
-  testModule: { type: Array },
   quantity: { type: Number },
   price: { type: Number, required: true },
+
+  // Service Reference Fields
+  serviceReference: { type: String },
+
+  // Common Service Fields
+  serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'services' },
+  serviceType: { 
+    type: String, 
+    enum: ['card', 'test', 'course', 'qualification'],
+    required: true 
+  },
+  status: { 
+    type: String, 
+    enum: ['ordered', 'scheduled', 'in-progress', 'completed', 'cancelled'],
+    default: 'ordered' 
+  },
+  notes: { type: String },
+  
+  // Category-Specific Fields
+  // Cards
+  cardDetails: {
+    cardType: { 
+      type: String, 
+      enum: ['New', 'Duplicate', 'Renewal'] 
+    },
+    deliveryLocation: { type: String },
+    cardRegID: { type: String },
+    recipientDetails: { type: Object },
+    verificationDocuments: [{ type: String }]
+  },
+  
+  // Tests
+  testDetails: {
+    citbTestId: { type: String },
+    testDate: { type: Date },
+    testTime: { type: String },
+    testCentre: { type: String },
+    voiceover: { type: String },
+    accommodations: { type: String },
+    testModules: [{ type: String }]
+  },
+  
+  // Courses
+  courseDetails: {
+    startDate: { type: Date },
+    endDate: { type: Date },
+    deliveryMethod: { 
+      type: String, 
+      enum: ['Online', 'In-person', 'Hybrid'] 
+    },
+    prerequisites: [{ type: String }],
+    accommodations: { type: String }
+  },
+  
+  // Qualifications
+  qualificationDetails: {
+    level: { 
+      type: String, 
+      enum: ['Basic', 'Intermediate', 'Advanced'] 
+    },
+    deliveryMethod: { 
+      type: String, 
+      enum: ['Online', 'In-person', 'Hybrid'] 
+    },
+    previousCertificateDetails: { type: Object },
+    verificationDocuments: [{ type: String }]
+  },
+  
+  // Service Lifecycle Fields
+  serviceHistory: [{
+    status: { type: String },
+    timestamp: { type: Date, default: Date.now },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'users' },
+    notes: { type: String }
+  }],
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'users' },
+  scheduledDate: { type: Date },
+  completedDate: { type: Date },
+  followUpDate: { type: Date }
 });
 
 const ordersSchema = mongoose.Schema({
+  // Add order type to distinguish between online and phone orders
+  orderType: {
+    type: String,
+    enum: ['ONLINE', 'PHONE'],
+    required: true,
+    default: 'ONLINE'
+  },
+
+  // Add reference fields for hierarchical reference system
+  orderReference: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+
+  // Add proper customer reference
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Customer',
+    required: true
+  },
+
+  // Keep customer details for backward compatibility
   customer: {
     _id: { type: String },
     name: { type: String },
@@ -33,6 +128,23 @@ const ordersSchema = mongoose.Schema({
     zipcode: { type: String },
     dob: { type: String },
     NINumber: { type: String },
+    firstName: { type: String },
+    lastName: { type: String },
+    status: { 
+      type: String,
+      enum: ['NEW_FIRST_TIME', 'NEW_PROSPECT', 'EXISTING_COMPLETED', 'EXISTING_ACTIVE'],
+      default: 'NEW_FIRST_TIME'
+    },
+    lastContact: { type: Date },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+  },
+
+  // Add sales staff reference for phone orders
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'users',
+    required: function() { return this.orderType === 'PHONE'; }
   },
 
   // payment

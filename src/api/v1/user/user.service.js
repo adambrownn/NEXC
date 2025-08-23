@@ -26,6 +26,7 @@ const createUser = async (userReqObj) => {
   let newUser = {};
 
   newUser.email = userReqObj?.email?.toLowerCase()?.trim();
+  newUser.dateOfBirth = userReqObj.dateOfBirth;
   newUser.address = userReqObj.address;
   newUser.name = userReqObj.name;
   newUser.phoneNumber = userReqObj.phoneNumber;
@@ -191,6 +192,43 @@ module.exports.updateUserAccountTypeDetails = async (req, res) => {
   // } else {
   //   throw new UnauthorizedException("Access Denied.");
   // }
+};
+
+module.exports.updateNotificationPreferences = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const preferences = req.body;
+
+    // Validate the preferences object
+    const validPreferenceKeys = ['email', 'push', 'sms', 'serviceUpdates', 'promotions', 'securityAlerts'];
+    const validPreferences = {};
+
+    Object.keys(preferences).forEach(key => {
+      if (validPreferenceKeys.includes(key) && typeof preferences[key] === 'boolean') {
+        validPreferences[key] = preferences[key];
+      }
+    });
+
+    // Update user's notification preferences
+    const userData = await userRepository.updateUser(
+      { _id: userId },
+      { notificationPreferences: validPreferences },
+      {}
+    );
+
+    if (userData) {
+      res.json({
+        success: true,
+        message: 'Notification preferences updated successfully',
+        data: userData.notificationPreferences
+      });
+    } else {
+      throw new Error("Failed to update notification preferences");
+    }
+  } catch (err) {
+    console.log(err);
+    res.json({ err: err.message });
+  }
 };
 
 module.exports.getUserDetails = async (req, res) => {

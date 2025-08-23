@@ -2,10 +2,10 @@ import { Link as ScrollLink } from "react-scroll";
 import { Link as RouterLink, Outlet } from "react-router-dom";
 // material
 // material
-import { Box, Container, Typography } from "@material-ui/core";
+import { Box, Container, Typography } from "@mui/material";
 // components
 import Logo from "../components/Logo";
-import { styled } from "@material-ui/styles";
+import { styled } from "@mui/material/styles";
 
 // ----------------------------------------------------------------------
 
@@ -45,9 +45,9 @@ export default function LogoOnlyLayout() {
           </ScrollLink>
 
           <Typography variant="caption" component="p">
-            © 2010 - 2021{" "}
-            <RouterLink to="https://constructionsafetyline.co.uk/">
-              <strong>www.constructionsafetyline.co.uk</strong>
+            © 2010 - 2025{" "}
+            <RouterLink to="https://nexc.co.uk/">
+              <strong>www.nexc.co.uk</strong>
             </RouterLink>{" "}
             All Rights Reserved
           </Typography>

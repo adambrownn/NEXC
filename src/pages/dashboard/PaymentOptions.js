@@ -3,9 +3,9 @@ import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import Select from "@mui/material/Select";
-import { LoadingButton } from "@material-ui/lab";
+import { LoadingButton } from "@mui/lab";
 import axiosInstance from "../../axiosConfig";
-import { Grid, Typography } from "@material-ui/core";
+import { Grid, Typography } from "@mui/material";
 import { payStatus } from "src/utils/constant";
 
 export default function PaymentOptions(props) {
@@ -17,18 +17,38 @@ export default function PaymentOptions(props) {
   const handleChange = (event) => {
     setPaymentStatus(event.target.value);
   };
+  // const handleSubmit = async () => {
+  //   setSubmitting(true);
+  //   const resp = await axiosInstance.put(`/orders/${props._id}`, {
+  //     paymentStatus,
+  //   });
+  //   if (resp.data.err) {
+  //     alert("Unable to Update");
+  //   } else {
+  //     window.location.reload();
+  //   }
+  //   setSubmitting(false);
+  // };
+
   const handleSubmit = async () => {
-    setSubmitting(true);
+  setSubmitting(true);
+  try {
     const resp = await axiosInstance.put(`/orders/${props._id}`, {
       paymentStatus,
     });
     if (resp.data.err) {
       alert("Unable to Update");
     } else {
-      window.location.reload();
+      // Instead of reloading, update the local state or call a function to refresh the data
+      props.onUpdateSuccess(resp.data);  // Assuming you pass a callback function as a prop
     }
+  } catch (error) {
+    console.error("Error updating payment status:", error);
+    alert("An error occurred while updating");
+  } finally {
     setSubmitting(false);
-  };
+  }
+};
 
   return (
     <div>

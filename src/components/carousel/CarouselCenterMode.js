@@ -6,8 +6,8 @@ import { Icon } from '@iconify/react';
 import { Link as RouterLink } from 'react-router-dom';
 import arrowForwardFill from '@iconify/icons-eva/arrow-forward-fill';
 // material
-import { alpha, useTheme, experimentalStyled as styled } from '@material-ui/core/styles';
-import { Box, Paper, Link, Typography, CardContent } from '@material-ui/core';
+import { alpha, useTheme, experimentalStyled as styled } from '@mui/material/styles';
+import { Box, Paper, Link, Typography, CardContent } from '@mui/material';
 // utils
 import { mockImgFeed } from '../../utils/mockImages';
 //

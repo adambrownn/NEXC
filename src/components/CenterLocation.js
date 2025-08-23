@@ -1,4 +1,4 @@
-import { Autocomplete, TextField } from "@material-ui/core";
+import { Autocomplete, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import axiosInstance from "../axiosConfig";
 
@@ -13,6 +13,10 @@ export default function CenterDatalist(props) {
     })();
   }, [props]);
 
+  const isOptionEqualToValue = (option, value) => {
+    return option._id === value._id;
+  };
+
   return (
     <Autocomplete
       id="test centers"
@@ -21,6 +25,7 @@ export default function CenterDatalist(props) {
       value={props.testCenter}
       getOptionLabel={(test) => test.title || ""}
       onChange={props.handleSelectCenter}
+      isOptionEqualToValue={isOptionEqualToValue}
       renderInput={(params) => (
         <TextField {...params} label="Test Center*" variant="outlined" />
       )}

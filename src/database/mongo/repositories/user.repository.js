@@ -50,6 +50,27 @@ const deleteUserByUserId = async (userId) => {
   return User.deleteOne({ _id: userId });
 };
 
+const getUserByPhoneOnlyForLogin = async (phoneNumber, loginType = "phone") => {
+  try {
+    // Build query to find user by phone number
+    const query = {
+      phoneNumber: phoneNumber,
+      isActive: true,
+    };
+
+    // If login type is specified and not "phone" (e.g., social login), check for matching provider
+    if (loginType && loginType !== "phone") {
+      query.socialIdentityProvider = loginType;
+    }
+
+    const user = await User.findOne(query);
+    return user;
+  } catch (error) {
+    console.error("Error in getUserByPhoneOnlyForLogin:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   createUser,
   getUserByEmailOnlyForLogin,
@@ -58,4 +79,5 @@ module.exports = {
   updateUser,
   updateBulkUser,
   deleteUserByUserId,
+  getUserByPhoneOnlyForLogin,
 };

@@ -1,343 +1,376 @@
-import { useContext, useEffect, useState, createContext } from "react";
+import { useContext, useState, useCallback, useMemo, useEffect } from "react";
 import { Icon } from "@iconify/react";
+import { CheckoutContext } from "../../pages/EcommerceCheckout";
 import arrowIosBackFill from "@iconify/icons-eva/arrow-ios-back-fill";
-import { enGB } from "date-fns/locale";
 // material
 import {
   Grid,
   Button,
   Card,
-  Stack,
-  TextField,
   CardHeader,
-  Typography,
-  CardContent,
-  Checkbox,
-  FormControlLabel,
   Backdrop,
   CircularProgress,
-} from "@material-ui/core";
-import { LoadingButton } from "@material-ui/lab";
-import DatePicker from "@mui/lab/DatePicker";
-import AdapterDateFns from "@mui/lab/AdapterDateFns";
-import LocalizationProvider from "@mui/lab/LocalizationProvider";
-import valid from "card-validator";
+  Checkbox,
+  Alert,
+  FormControlLabel,
+  Box,
+  Typography,
+} from "@mui/material";
 
-import CheckoutSummary from "./CheckoutSummary";
-import CheckoutPaymentMethods from "./CheckoutPaymentMethods";
+//Stripe
+import { Elements } from '@stripe/react-stripe-js';
+import { useTheme } from '@mui/material/styles';
+import StripeService from '../../services/stripe';
 
-import UserService from "../../services/user";
-import CartBucketService from "../../services/bucket";
-import AxiosInstance from "../../axiosConfig";
+// Custom components and hooks
+import StripePaymentForm from './StripePaymentForm';
+import OrderSummaryPanel from './payment/OrderSummaryPanel';
+import PaymentSecurityNotice from './payment/PaymentSecurityNotice';
 
-const PaymentDetailContext = createContext();
+// Import CartContext
+import { useCart } from '../../contexts/CartContext';
+import { logRender, measurePerformance } from '../../utils/performanceUtils';
 
-const PAYMENT_OPTIONS = [
-  {
-    value: "credit_card",
-    title: "Credit / Debit Card",
-    description: "We support Mastercard, Visa, JCB and Diners Club.",
-    icons: [
-      { logo: "logos:visa", fontSize: 14 },
-      { logo: "logos:mastercard", fontSize: 24 },
-      { logo: "logos:jcb", fontSize: 26 },
-      { logo: "cib:cc-diners-club", fontSize: 30 },
-    ],
-    disabled: false,
-  },
-  // {
-  //   value: "paylater",
-  //   title: "Pay later",
-  //   description: "Our executive will connect you for the Payment details",
-  //   icons: [],
-  //   disabled: false,
-  // },
-];
+// Add imports for normalization utilities
+import {
+  normalizeOrderObject,
+  normalizeCustomerObject,
+  prepareAmountForApi,
+  prepareAmountForDisplay
+} from '../../utils/dataNormalization';
 
-export default function CheckoutPayment(props) {
-  const { setActiveStep, setOrderId } = useContext(
-    props.tradeApplicationContext
-  );
+// Use the centralized Stripe service to get the Stripe instance
+const stripePromise = StripeService.getStripe();
+
+/**
+ * CheckoutPayment component
+ * Handles payment processing for checkout
+ */
+function CheckoutPayment() {
+  // Log component render in development mode
+  logRender('CheckoutPayment', {});
+
+  // Initialize theme at the top level (not conditionally)
+  const theme = useTheme();
+
+  // Get checkout context for navigation and order management
+  const {
+    handleNext,
+    handleBack,
+    setOrderId
+  } = useContext(CheckoutContext);
+
+  // Use CartContext for all cart-related operations
+  const {
+    items = [],
+    customer = {},
+    loading: cartLoading,
+    error: cartError,
+    createPaymentIntent,
+    confirmPayment,
+    clientSecret,
+    paymentStatus,
+    operationInProgress,
+    operationError,
+    resetOperationError,
+    createOrder
+  } = useCart();
+
   const [openBackdrop, setOpenBackdrop] = useState(false);
-  const [isTermsAccepted, setIsTermsAccepted] = useState(true);
-  const [dob, setDob] = useState("");
-  const [orderSummary, setOrderSummary] = useState({});
-  const [formInput, setFormInput] = useState({
-    paymentMode: "credit_card",
-  });
-  const [currentUser, setCurrentUser] = useState({});
+  const [isTermsAccepted, setIsTermsAccepted] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [orderId, setOrderIdState] = useState(null);
+  const [formInput, setFormInput] = useState({ cardholderName: customer?.name || '', saveCard: false });
+  const [paymentError, setPaymentError] = useState(null);
+  const [paymentIntentLoading, setPaymentIntentLoading] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const user = await UserService.getBillingUser();
-      setCurrentUser(user);
-      setFormInput(user);
-      setDob(user.dob || "");
+  // Memoize expensive calculations
+  const { totalAmountInPounds, totalAmount, displayAmount } = useMemo(() => {
+    return measurePerformance('CheckoutPayment - Calculate Amounts', () => {
+      // Calculate total amount in pounds
+      const totalAmountInPounds = items.reduce((total, item) => (
+        total + (Number(item.price) * (item.quantity || 1))
+      ), 0);
 
-      // orders summary
-      const items = await CartBucketService.getItemsFromBucket();
-      let itemsTotal = 0;
-      let grandTotalToPay = 0;
-      items?.forEach((item) => {
-        itemsTotal = itemsTotal + Number(item.price);
+      // Convert to pence for Stripe (multiply by 100)
+      // Ensure we're working with a proper number format
+      const totalAmount = Math.round(totalAmountInPounds * 100);
 
-        grandTotalToPay = grandTotalToPay + Number(item.price);
-      });
-      const orderReqObj = {
-        items: items,
-        itemsTotal: parseFloat(itemsTotal).toFixed(2),
-        grandTotalToPay: parseFloat(grandTotalToPay).toFixed(2),
-      };
-      setOrderSummary(orderReqObj);
-    })();
-  }, [props]);
+      // Format for display (pounds)
+      const displayAmount = totalAmountInPounds.toFixed(2);
 
-  const handleCompleteOrder = async () => {
-    try {
-      formInput.paymentMode = "credit_card";
-      if (!formInput.paymentMode) {
-        throw new Error("Please select a payment mode");
-      }
-      if (!isTermsAccepted) {
-        throw new Error("Please accept Terms & Conditions before continue");
-      }
-      if (
-        Object.entries(currentUser).length < 3 ||
-        !dob ||
-        !formInput.NINumber ||
-        !formInput.address ||
-        !formInput.zipcode
-      ) {
-        throw new Error("All input required");
-      }
-
-      const saveUserReq = {
-        name: currentUser.name,
-        email: currentUser.email,
-        phoneNumber: currentUser.phoneNumber,
-        dob: dob,
-        NINumber: formInput.NINumber,
-        address: formInput.address,
-        zipcode: formInput.zipcode,
-      };
-      // update billing user
-      await UserService.createUser(saveUserReq);
-
-      // update bucket token
-      const bucketToken = await UserService.getBucketToken();
-
-      // save details to backend first
-      await AxiosInstance.put(`/orders/${bucketToken._id}`, {
-        customer: saveUserReq,
-      });
-
-      if (formInput.paymentMode === "credit_card") {
-        if (
-          !formInput.cardholderName ||
-          !formInput.cardNumber ||
-          !formInput.month ||
-          !formInput.year ||
-          !formInput.securityCode
-        ) {
-          throw new Error("Please enter all Card fields");
-        }
-        if (
-          formInput.cardholderName?.length > 45 ||
-          formInput.cardNumber?.length > 16
-        ) {
-          throw new Error("Invalid Card input");
-        }
-      }
-
-      const confirmReturn = window.confirm(
-        "Are you sure, You want to Proceed?"
-      );
-
-      if (confirmReturn) {
-        setOpenBackdrop(true);
-        // update req
-        const updateReq = {
-          paymentMethod: formInput.paymentMode,
-          paymentStatus: 1,
-          orderCheckPoint: 3,
-          customer: saveUserReq,
-          orderDetails: orderSummary,
-        };
-
-        if (formInput.paymentMode === "credit_card") {
-          updateReq.cardInfo = {
-            cardholderName: formInput.cardholderName,
-            cardNumber: formInput.cardNumber,
-            expiryDate:
-              formInput.month + formInput.year.toString().substring(2, 4),
-            securityCode: formInput.securityCode,
-          };
-          const numberValidation = valid.number(formInput.cardNumber);
-          if (!numberValidation.isPotentiallyValid) {
-            throw new Error("Please enter valid Card details!");
-          }
-        }
-
-        // update in db
-        const resp = await AxiosInstance.put(
-          `/orders/payment/${bucketToken._id}`,
-          updateReq
-        );
-        setOpenBackdrop(false);
-        if (resp.data.err) {
-          throw new Error("Transaction Failed, Please try again.");
-        }
-        if (resp.data.paymentStatus === 2) {
-          setOrderId(resp.data?._id);
-          localStorage.removeItem("cart");
-          localStorage.removeItem("buckettoken");
-          localStorage.removeItem("testCenter");
-          setActiveStep(3);
-        }
-      }
-    } catch (error) {
-      setOpenBackdrop(false);
-      alert(error.message);
-    }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormInput({
-      ...formInput,
-      [name]: value,
+      return { totalAmountInPounds, totalAmount, displayAmount };
     });
-  };
+  }, [items]); // Only recalculate when items array changes
+
+  // Use normalized data
+  const normalizedItems = useMemo(() => {
+    return items.map(item => ({
+      ...item,
+      price: Number(item.price),
+      quantity: Number(item.quantity) || 1
+    }));
+  }, [items]);
+
+  // Normalize customer data
+  const normalizedCustomer = useMemo(() => {
+    return normalizeCustomerObject(customer);
+  }, [customer]);
+
+  // Calculate standardized amount
+  const standardizedAmount = useMemo(() => {
+    return normalizedItems.reduce((sum, item) => {
+      return sum + (item.price * item.quantity);
+    }, 0);
+  }, [normalizedItems]);
+
+  // Format amount for display
+  const formattedAmount = useMemo(() => {
+    return prepareAmountForDisplay(standardizedAmount);
+  }, [standardizedAmount]);
+
+  // Amount in pence for Stripe
+  const amountInPence = useMemo(() => {
+    return prepareAmountForApi(standardizedAmount);
+  }, [standardizedAmount]);
+
+  // Initialize payment intent when component mounts
+  useEffect(() => {
+    const initializePayment = async () => {
+      if (items.length > 0 && customer?.email && !clientSecret) {
+        setPaymentIntentLoading(true);
+        try {
+          const result = await createPaymentIntent(totalAmountInPounds);
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to initialize payment');
+          }
+        } catch (error) {
+          setPaymentError(error.message || 'Failed to initialize payment');
+        } finally {
+          setPaymentIntentLoading(false);
+        }
+      }
+    };
+
+    initializePayment();
+  }, [items, customer, clientSecret, createPaymentIntent, totalAmountInPounds]);
+
+  // Handle payment completion - memoized with useCallback to prevent unnecessary re-renders
+  const handleCompleteOrder = useCallback(async (paymentMethodId) => {
+    if (!isTermsAccepted) {
+      setPaymentError("Please accept Terms & Conditions before continuing");
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      setPaymentError(null);
+      setOpenBackdrop(true);
+
+      // Confirm payment using CartContext
+      const confirmResult = await confirmPayment(paymentMethodId, formInput.saveCard);
+      if (!confirmResult.success) {
+        throw new Error(confirmResult.error || "Payment confirmation failed");
+      }
+
+      // Prepare order data
+      const orderData = {
+        customer: customer,
+        items: items,
+        paymentMethod: 'stripe',
+        paymentStatus: confirmResult.status || 'succeeded',
+        stripePaymentMethodId: paymentMethodId,
+        amount: totalAmount
+      };
+
+      // Create order using CartContext
+      const orderResult = await createOrder(orderData);
+      if (!orderResult.success) {
+        throw new Error(orderResult.error || "Order creation failed");
+      }
+
+      const newOrderId = orderResult.order.id;
+
+      // Update the orderId state
+      setOrderIdState(newOrderId);
+
+      // Save order ID and advance to completion
+      setOrderId(newOrderId);
+      handleNext();
+    } catch (error) {
+      console.error('Payment error:', error);
+      setPaymentError(error.message || "An unexpected error occurred during payment processing");
+    } finally {
+      setOpenBackdrop(false);
+      setProcessing(false);
+    }
+  }, [
+    isTermsAccepted,
+    customer,
+    items,
+    totalAmount,
+    confirmPayment,
+    createOrder,
+    formInput.saveCard,
+    setOrderId,
+    handleNext
+  ]);
+
+  if (!stripePromise) {
+    return (
+      <Card sx={{ p: 3 }}>
+        <CardHeader title="Payment Processing Unavailable" />
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Payment processing is currently unavailable. Please try again later.
+        </Alert>
+      </Card>
+    );
+  }
 
   return (
     <Grid container spacing={3}>
       <Grid item xs={12} md={8}>
-        <Card sx={{ p: 3 }}>
-          <CardHeader title="Purchase Details" sx={{ marginBottom: 3 }} />
-          <Stack spacing={3}>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={{ xs: 3, sm: 2 }}
-            >
-              <LocalizationProvider dateAdapter={AdapterDateFns} locale={enGB}>
-                <DatePicker
-                  label="Date of Birth"
-                  name="dob"
-                  value={dob}
-                  onChange={(newValue) => {
-                    setDob(newValue);
+        {cartLoading || paymentIntentLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}>
+            <CircularProgress />
+            <Typography variant="body2" sx={{ ml: 2, alignSelf: 'center' }}>
+              {paymentIntentLoading ? 'Initializing payment system...' : 'Loading cart data...'}
+            </Typography>
+          </Box>
+        ) : cartError ? (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {cartError}
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Please try refreshing the page or contact customer support if the problem persists.
+            </Typography>
+          </Alert>
+        ) : (
+          <Card sx={{ p: 3, mb: 3, borderRadius: 2, boxShadow: theme.customShadows.z12 }}>
+            <CardHeader
+              title={
+                <Typography variant="h5" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                  Payment Method
+                </Typography>
+              }
+            />
+            {(paymentError || operationError) && (
+              <Alert severity="error" sx={{ mx: 3, mb: 3 }}>
+                {paymentError || operationError}
+                <Button
+                  size="small"
+                  sx={{ ml: 2 }}
+                  onClick={() => {
+                    setPaymentError(null);
+                    resetOperationError();
                   }}
-                  renderInput={(params) => <TextField {...params} />}
+                >
+                  Dismiss
+                </Button>
+              </Alert>
+            )}
+            <Box sx={{ p: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+                <Icon icon="mdi:shield-lock" style={{ marginRight: 8, color: theme.palette.primary.main }} />
+                Secure payment processing by Stripe
+              </Typography>
+
+              {/* Payment Security Notice Component */}
+              <PaymentSecurityNotice />
+
+              {clientSecret ? (
+                <Elements
+                  stripe={stripePromise}
+                  key={clientSecret} // Add a key based on clientSecret to force proper re-mounting
+                  options={{
+                    clientSecret,
+                    appearance: {
+                      theme: 'stripe',
+                      variables: {
+                        colorPrimary: theme.palette.primary.main,
+                        fontFamily: theme.typography.fontFamily,
+                        colorBackground: '#ffffff',
+                        colorText: '#30313d',
+                        borderRadius: '4px',
+                        spacingUnit: '4px'
+                      },
+                      rules: {
+                        '.Input': {
+                          border: '1px solid #E0E0E0',
+                          boxShadow: '0px 1px 1px rgba(0, 0, 0, 0.03)',
+                          padding: '10px 14px'
+                        },
+                        '.Input:focus': {
+                          boxShadow: '0px 1px 1px rgba(0, 0, 0, 0.03), 0px 0px 0px 2px rgba(25, 118, 210, 0.2)'
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <StripePaymentForm
+                    handleCompleteOrder={handleCompleteOrder}
+                    amount={totalAmount}
+                    displayAmount={displayAmount}
+                    cardholderName={customer?.name}
+                    formInput={formInput}
+                    setFormInput={setFormInput}
+                    disabled={processing || operationInProgress}
+                    order={{ _id: orderId || 'temp-order-id' }} // Use actual order ID if available
+                    customer={{ _id: customer?.id || 'temp-customer-id', email: customer?.email }}
+                    paymentStatus={paymentStatus}
+                  />
+                </Elements>
+              ) : (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress size={40} />
+                  <Typography variant="body2" sx={{ ml: 2, alignSelf: 'center' }}>
+                    Initializing payment system...
+                  </Typography>
+                </Box>
+              )}
+
+              <Box sx={{ mt: 3 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={isTermsAccepted}
+                      onChange={(e) => setIsTermsAccepted(e.target.checked)}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Typography variant="body2">
+                      I accept the <a href="/terms" target="_blank" rel="noopener">terms and conditions</a> and <a href="/privacy" target="_blank" rel="noopener">privacy policy</a>
+                    </Typography>
+                  }
                 />
-              </LocalizationProvider>
-              <TextField
-                fullWidth
-                label="NI Number"
-                name="NINumber"
-                value={formInput.NINumber || ""}
-                onChange={handleInputChange}
-              />
-            </Stack>
-
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={{ xs: 3, sm: 2 }}
-            >
-              <TextField
-                fullWidth
-                label="Address"
-                name="address"
-                value={formInput.address || ""}
-                onChange={handleInputChange}
-              />
-              <TextField
-                fullWidth
-                label="Postcode"
-                name="zipcode"
-                value={formInput.zipcode || ""}
-                onChange={handleInputChange}
-              />
-            </Stack>
-          </Stack>
-        </Card>
-
-        <CheckoutPaymentMethods
-          formInput={formInput}
-          handleInputChange={handleInputChange}
-          paymentOptions={PAYMENT_OPTIONS}
-          paymentContext={PaymentDetailContext}
-        />
+              </Box>
+            </Box>
+          </Card>
+        )}
 
         <Button
-          type="button"
-          size="small"
           color="inherit"
-          onClick={() => setActiveStep(0)}
+          size="large"
+          onClick={handleBack}
           startIcon={<Icon icon={arrowIosBackFill} />}
+          disabled={processing || cartLoading}
         >
-          Back
+          Back to Order Summary
         </Button>
       </Grid>
 
       <Grid item xs={12} md={4}>
-        <Card sx={{ mb: 3 }}>
-          <CardHeader title="Billing Info" />
-          <CardContent>
-            <Typography variant="subtitle2" gutterBottom>
-              <Typography component="span" variant="h6">
-                {currentUser.name}
-              </Typography>
-            </Typography>
-
-            <Typography
-              variant="body2"
-              sx={{ color: "text.secondary" }}
-              gutterBottom
-            >
-              {currentUser.phoneNumber}
-            </Typography>
-            <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              {currentUser.email}
-            </Typography>
-          </CardContent>
-        </Card>
-        <CheckoutSummary
-          enableEdit
-          totalItems={orderSummary?.items?.length || "NA"}
-          itemsTotal={orderSummary?.itemsTotal || "NA"}
-          grandTotal={orderSummary?.grandTotalToPay || "NA"}
+        {/* Order Summary Panel Component */}
+        <OrderSummaryPanel
+          customer={customer}
+          items={items}
+          displayAmount={displayAmount}
+          isTermsAccepted={isTermsAccepted}
+          processing={processing}
+          onCompleteOrder={handleCompleteOrder}
         />
-        <FormControlLabel
-          size="small"
-          onChange={() => setIsTermsAccepted(!isTermsAccepted)}
-          control={<Checkbox checked={isTermsAccepted} name="tandc" />}
-          label={
-            <Typography variant="caption">
-              I understand and agree to{" "}
-              <a href="/terms-condition" target="_blank">
-                Terms and Conditions
-              </a>
-            </Typography>
-          }
-        />
-        <LoadingButton
-          fullWidth
-          size="large"
-          type="submit"
-          variant="contained"
-          onClick={handleCompleteOrder}
-          loading={false}
-        >
-          Confirm {"&"} Checkout
-        </LoadingButton>
-        <br />
-        <br />
-        <Typography variant="subtitle2">Company Number: 13546291</Typography>
-        <Typography variant="caption">
-          71 - 75, Shelton Street, <br /> Covent Garden London WC2H 9JQ UNITED
-          KINGDOM
-        </Typography>
       </Grid>
+
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
         open={openBackdrop}
@@ -347,3 +380,8 @@ export default function CheckoutPayment(props) {
     </Grid>
   );
 }
+
+// Export the component with a display name for debugging
+CheckoutPayment.displayName = 'CheckoutPayment';
+
+export default CheckoutPayment;

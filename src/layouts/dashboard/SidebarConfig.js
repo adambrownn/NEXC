@@ -23,6 +23,8 @@ const ICONS = {
   analytics: getIcon("ic_analytics"),
   dashboard: getIcon("ic_dashboard"),
   kanban: getIcon("ic_kanban"),
+  sales: getIcon("ic_ecommerce"),
+  service: getIcon('eva:tool-fill'),
 };
 
 const sidebarConfig = [
@@ -31,11 +33,27 @@ const sidebarConfig = [
   {
     subheader: "general",
     items: [
-      // {
-      //   title: "Dashboard",
-      //   path: PATH_DASHBOARD.general.app,
-      //   icon: ICONS.dashboard,
-      // },
+      {
+        title: "Sales Portal",
+        path: PATH_DASHBOARD.general.sales,
+        icon: ICONS.sales,
+      },
+      // Add Chat Management here for higher visibility
+      {
+        title: "Chat Management",
+        path: PATH_DASHBOARD.service.chat,
+        icon: ICONS.chat,
+      },
+      {
+        title: "Service Portal",
+        path: PATH_DASHBOARD.service.root,
+        icon: ICONS.service,
+      },
+      {
+        title: "Call Management",
+        path: PATH_DASHBOARD.general.calls,
+        icon: ICONS.call,
+      },
       {
         title: "Reserved",
         path: PATH_DASHBOARD.general.customers,
@@ -64,14 +82,21 @@ const sidebarConfig = [
   {
     subheader: "Management",
     items: [
-      // SERVICES : cards
+      // SERVICES : trades
       {
-        title: "trades",
-        path: PATH_DASHBOARD.trades,
+        title: "Trades",
+        path: PATH_DASHBOARD.trades.root,
         icon: ICONS.kanban,
+      },
+      // SERVICES : Trade-Service Associations
+      {
+        title: "Trade-Service Associations",
+        path: PATH_DASHBOARD.tradeServiceAssociations.root,
+        icon: ICONS.analytics,
       },
     ],
   },
+
   // SERVICES
   // ----------------------------------------------------------------------
   {
@@ -136,8 +161,19 @@ const sidebarConfig = [
   // OTHERS
   // ----------------------------------------------------------------------
   {
-    subheader: "others",
-    items: [{ title: "FAQ", path: PATH_DASHBOARD.faq.root, icon: ICONS.mail }],
+    subheader: "Others",
+    items: [
+      {
+        title: "Blog",
+        path: PATH_DASHBOARD.general.blog,
+        icon: ICONS.blog,
+      },
+      {
+        title: "FAQs",
+        path: PATH_DASHBOARD.general.others,
+        icon: ICONS.chat,
+      },
+    ],
   },
 ];
 

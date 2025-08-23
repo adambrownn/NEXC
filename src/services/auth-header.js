@@ -1,12 +1,23 @@
+/**
+ * Service for handling authentication headers.
+ */
 class AuthHeader {
-  async getAuthHeaderToken() {
-    const token = await JSON.parse(localStorage.getItem("accessToken"));
-    if (token) {
-      return { authorizationToken: "Bearer " + token };
-    } else {
-      return {};
+  /**
+   * Retrieves the authentication header token.
+   * @returns {Object} An object containing the authorization token or an empty object.
+   */
+  getAuthHeaderToken() {
+    try {
+      const token = JSON.parse(localStorage.getItem("accessToken"));
+      if (token) {
+        return { authorizationToken: `Bearer ${token}` };
+      }
+    } catch (error) {
+      console.error("Error retrieving auth header token:", error);
     }
+    return {};
   }
 }
 
-export default new AuthHeader();
+const authHeader = new AuthHeader();
+export default authHeader;

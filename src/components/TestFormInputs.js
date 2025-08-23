@@ -8,43 +8,56 @@ import {
   OutlinedInput,
   Checkbox,
   ListItemText,
-} from "@material-ui/core";
+} from "@mui/material";
 import { testModuleAr, testVoiceOver } from "../utils/constant";
 import DateTimePickers from "./DatePicker";
 import CartBucketService from "../services/bucket";
-import CancelIcon from "@material-ui/icons/Cancel";
+import CancelIcon from "@mui/icons-material/Cancel";
 
 const DateTimeContext = createContext();
 
 export default function TestFormInputs(props) {
-  const [testDate, setTestDate] = useState("");
+  const [testDate, setTestDate] = useState(null);
   const [testTime, setTestTime] = useState("");
   const [voiceover, setVoiceOver] = useState("");
   const [selectedModules, setSelectedModules] = useState([]);
   const [moduleSelect, setModuleSelect] = useState(false);
 
   useEffect(() => {
-    (async () => {
+  (async () => {
+    try {
       const items = await CartBucketService.getItemsFromBucket();
       items.forEach((item) => {
         if (item._id === props._id) {
-          setTestDate(item.testDate || "");
+          console.log('testDate type:', typeof item.testDate, 'value:', item.testDate);
+          setTestDate(item.testDate ? new Date(item.testDate) : null);
           setTestTime(item.testTime || "");
           setVoiceOver(item.voiceover || "");
         }
       });
-    })();
-  }, [props]);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  })();
+}, [props]);
 
   const handleSaveToItem = async (value, name) => {
+  try {
     const items = await CartBucketService.getItemsFromBucket();
-    items.forEach((item) => {
+    const updatedItems = items.map((item) => {
       if (item._id === props._id) {
-        item[name] = value;
+        return { 
+          ...item, 
+          [name]: name === "testDate" ? value.toISOString() : value 
+        };
       }
+      return item;
     });
-    await CartBucketService.updateItems(items);
-  };
+    await CartBucketService.updateItems(updatedItems);
+  } catch (error) {
+    console.error("Error saving item:", error);
+  }
+};
 
   const handleSelectModules = (event) => {
     if (selectedModules.length < 5) {
@@ -65,14 +78,23 @@ export default function TestFormInputs(props) {
             direction={{ xs: "column", sm: "row" }}
             spacing={{ xs: 3, sm: 2 }}
           >
-            <DateTimeContext.Provider
-              value={{ testDate, setTestDate, testTime, setTestTime }}
-            >
-              <DateTimePickers
-                dateTimeContext={DateTimeContext}
-                handleSaveToItem={handleSaveToItem}
-              />
-            </DateTimeContext.Provider>
+          <DateTimeContext.Provider
+  value={{ testDate, setTestDate, testTime, setTestTime }}
+>
+  <DateTimePickers
+    testDate={testDate}
+    setTestDate={(date) => {
+      setTestDate(date);
+      handleSaveToItem(date, "testDate");
+    }}
+    testTime={testTime}
+    setTestTime={(time) => {
+      setTestTime(time);
+      handleSaveToItem(time, "testTime");
+    }}
+    handleSaveToItem={handleSaveToItem}
+  />
+</DateTimeContext.Provider>
           </Stack>
           <Stack
             direction={{ xs: "column", sm: "row" }}
@@ -94,8 +116,8 @@ export default function TestFormInputs(props) {
                     setVoiceOver(e.target.value);
                   }}
                 >
-                  {testVoiceOver?.map((voiceover) => (
-                    <MenuItem value={voiceover} map={voiceover}>
+                  {testVoiceOver?.map((voiceover, index) => (
+                    <MenuItem key={index} value={voiceover} map={voiceover}>
                       {voiceover}
                     </MenuItem>
                   ))}

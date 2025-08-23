@@ -1,25 +1,44 @@
-// scroll bar
-import "simplebar/src/simplebar.css";
-
-import ReactDOM from "react-dom";
+import React from 'react';
+import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
-//
+// scroll bar
+import 'simplebar/dist/simplebar.min.css';
+
 import App from "./App";
 import * as serviceWorker from "./serviceWorker";
 import reportWebVitals from "./reportWebVitals";
 
+
 // ----------------------------------------------------------------------
 
-ReactDOM.render(
-  <HelmetProvider>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </HelmetProvider>,
-  document.getElementById("root")
+const root = createRoot(document.getElementById('root'));
+
+root.render(
+  <React.StrictMode>
+    <GoogleOAuthProvider clientId="YOUR_GOOGLE_CLIENT_ID">
+      <HelmetProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </HelmetProvider>
+    </GoogleOAuthProvider>
+  </React.StrictMode>
 );
+
+// Old methods for React 16.8 and below
+// ReactDOM.render(
+//   <GoogleOAuthProvider clientId="YOUR_GOOGLE_CLIENT_ID">
+//     <HelmetProvider>
+//       <BrowserRouter>
+//         <App />
+//       </BrowserRouter>
+//     </HelmetProvider>
+//   </GoogleOAuthProvider>,
+//   document.getElementById("root")
+// );
 
 // If you want to enable client cache, register instead.
 serviceWorker.unregister();

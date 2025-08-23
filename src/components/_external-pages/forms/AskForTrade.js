@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-} from "@material-ui/core";
+} from "@mui/material";
 import TradeDatalist from "../trades/TradeDatalist";
 import UserService from "../../../services/user";
 import UserForm from "./UserForm";

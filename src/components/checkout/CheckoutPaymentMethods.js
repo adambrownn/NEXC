@@ -2,7 +2,7 @@ import PropTypes from "prop-types";
 import { Icon } from "@iconify/react";
 import checkmarkCircle2Fill from "@iconify/icons-eva/checkmark-circle-2-fill";
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
+import { experimentalStyled as styled } from "@mui/material/styles";
 import {
   Box,
   Card,
@@ -20,7 +20,7 @@ import {
   Select,
   MenuItem,
   FormControl,
-} from "@material-ui/core";
+} from "@mui/material";
 import { MHidden } from "../@material-extend";
 
 const OptionStyle = styled("div")(({ theme }) => ({
@@ -110,7 +110,7 @@ export default function CheckoutPaymentMethods({
                     {/* {formInput.paymentMode === "credit_card" && */}
                     {hasChildren && (
                       <Collapse
-                        in={hasChildren}
+                        in={Boolean(hasChildren)}
                         sx={{ width: "100%", marginBottom: 4 }}
                       >
                         <Stack spacing={3}>
@@ -149,7 +149,7 @@ export default function CheckoutPaymentMethods({
                                 labelId="expiry-month"
                                 id="expiry-month"
                                 name="month"
-                                value={formInput.month}
+                                value={formInput.month || ""}
                                 label="Expiry Month *"
                                 onChange={handleInputChange}
                               >
@@ -175,7 +175,7 @@ export default function CheckoutPaymentMethods({
                                 labelId="expiry-year"
                                 id="expiry-year"
                                 name="year"
-                                value={formInput.year}
+                                value={formInput.year || ""}
                                 label="Expiry Year *"
                                 onChange={handleInputChange}
                               >

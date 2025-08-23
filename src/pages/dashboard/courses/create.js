@@ -11,9 +11,9 @@ import {
   Checkbox,
   OutlinedInput,
   InputAdornment,
-} from "@material-ui/core";
+} from "@mui/material";
 
-import { Save as SaveIcon } from "@material-ui/icons";
+import SaveIcon from '@mui/icons-material/Save';
 
 import SubCard from "../../../components/_dashboard/cards/SubCard";
 import { gridSpacing } from "../../../utils/constant";
@@ -149,11 +149,11 @@ const CoursesCreate = (props) => {
                   value={formInput.category || ""}
                   onChange={handleInputChange}
                 >
-                  <MenuItem value={"operative"}>Operative</MenuItem>
-                  <MenuItem value={"managerial-and-directoral"}>
-                    Managerial and Directoral
+                  <MenuItem value={"citb"}>citb</MenuItem>
+                  <MenuItem value={"healthandsafety"}>
+                    Health and Safety
                   </MenuItem>
-                  <MenuItem value={"supervision"}>Supervision</MenuItem>
+                  <MenuItem value={"plantoperations"}>Plant Operations</MenuItem>
                   <MenuItem value={"scaffolding"}>Scaffolding</MenuItem>
                 </Select>
               </FormControl>

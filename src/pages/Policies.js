@@ -1,6 +1,6 @@
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
-import { Divider } from "@material-ui/core";
+import { experimentalStyled as styled } from "@mui/material/styles";
+import { Divider } from "@mui/material";
 import Page from "../components/Page";
 
 const RootStyle = styled(Page)(({ theme }) => ({
@@ -22,8 +22,7 @@ export default function Policies() {
     <RootStyle title="Policies | CSL">
       <h1 style={{ textAlign: "center", fontSize: 40 }}>Our Policies</h1>
       <Divider />
-      <p id="refund">
-        <div style={{ marginBlock: 100 }}>
+        <div id="refund" style={{ marginBlock: 100 }}>
           <h1>Refund Policy:</h1>
           <br></br>
           <p>
@@ -107,13 +106,11 @@ export default function Policies() {
             contact us by calling us or emailing us below:
           </p>
           <br></br>
-          <a href="mailto:support@constructionsafetyline.co.uk">
-            support@constructionsafetyline.co.uk
+          <a href="mailto:support@nexc.co.uk">
+            support@nexc.co.uk
           </a>
         </div>
-      </p>
-      <p id="cancellation">
-        <div style={{ marginBlock: 100 }}>
+      <div id="cancellation" style={{ marginBlock: 100 }}>
           <h1>Cancellation policy:</h1>
           <br></br>
           <p>
@@ -174,19 +171,17 @@ export default function Policies() {
             then changes their mind.
           </p>
         </div>
-      </p>
 
-      <p id="Rescheduling Policy">
-        <div style={{ marginBlock: 100 }}>
+      <div id="Rescheduling Policy" style={{ marginBlock: 100 }}>
           <h1>Rescheduling Policy:</h1>
           <br></br>
           <p>
             If you want to postpone the exam/course booked by us, you must
             contact us via email:{" "}
-            <a href="mailto:support@constructionsafetyline.co.uk">
-              support@constructionsafetyline.co.uk
+            <a href="mailto:support@nexc.co.uk">
+              support@nexc.co.uk
             </a>{" "}
-            or call +44 (0) 330 912 1773, stating your first name, last name,
+            or call +91 (0) 99717 14172, stating your first name, last name,
             and order ID. If you fail to contact us as described above, your fee
             will not be refunded.
           </p>
@@ -220,7 +215,6 @@ export default function Policies() {
             must contact us via our main lines.
           </p>
         </div>
-      </p>
     </RootStyle>
   );
 }

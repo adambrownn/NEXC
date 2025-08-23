@@ -42,7 +42,7 @@ router
   .post(userService.getUserDetails);
 /**
  *
- * @param {email, password, phoneNumber, address, name, accountType, registrationType} req
+ * @param {email, dateOfBirth, password, phoneNumber, address, name, accountType, registrationType} req
  * @param {user, accessToken, refreshToken} res
  * @returns
  */
@@ -50,7 +50,7 @@ router.route("/registration").post(userService.registerUser);
 
 /**
  *
- * @param  {name} req
+ * @param  {name, dateOfBirth} req
  * @param {user} res
  * @returns
  */
@@ -70,6 +70,16 @@ router
   .route("/update-user-account-type-details")
   .put(extractTokenDetails, userService.updateUserAccountTypeDetails);
 
+// ADD NEW ROUTE HERE
+/**
+ * Update user notification preferences
+ * @param {Object} req.body - Object containing boolean preference values
+ * @returns {Object} Updated notification preferences
+ */
+router
+  .route("/notification-preferences")
+  .put(extractTokenDetails, userService.updateNotificationPreferences);
+
 /**
  * API to send OTP via simple Message
  * TWILIO
@@ -78,7 +88,7 @@ router.route("/send-otp-via-simple-message").post(async (req, res) => {
   try {
     // send 6 digit Verification Code via SMS
     const randomOtp = Math.floor(100000 + Math.random() * 900000);
-    const otpMessage = `${randomOtp} is your Construction Safety Line verification code. Enjoy!`;
+    const otpMessage = `${randomOtp} is your NEXC verification code. Enjoy!`;
 
     const messageResp = sendSMS(req.body.destinationPhone, otpMessage);
     res.json({

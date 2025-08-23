@@ -3,9 +3,9 @@ import { Icon } from "@iconify/react";
 import eyeFill from "@iconify/icons-eva/eye-fill";
 import { Link as RouterLink } from "react-router-dom";
 import shareFill from "@iconify/icons-eva/share-fill";
-import messageCircleFill from "@iconify/icons-eva/message-circle-fill";
+import clockFill from "@iconify/icons-eva/clock-fill";
 // material
-import { alpha, styled } from "@material-ui/core/styles";
+import { styled } from "@mui/material/styles";
 import {
   Box,
   Link,
@@ -14,7 +14,9 @@ import {
   Avatar,
   Typography,
   CardContent,
-} from "@material-ui/core";
+  Chip,
+  Stack,
+} from "@mui/material";
 // utils
 import { fDate } from "../../../utils/formatTime";
 import { fShortenNumber } from "../../../utils/formatNumber";
@@ -69,36 +71,42 @@ BlogPostCard.propTypes = {
 };
 
 export default function BlogPostCard({ post, index }) {
-  const { cover, title, view, comment, share, author, createdAt } = post;
+  const {
+    title = '',
+    excerpt = '',
+    coverImage = '',
+    author = {
+      name: '',
+      avatarUrl: '/static/mock-images/avatars/avatar_default.jpg'
+    },
+    createdAt = new Date().toISOString(),
+    status = 'draft',
+    metadata = { 
+      views: 0, 
+      shares: 0, 
+      readTime: 0 
+    },
+    categories = [],
+    _id: id = ''
+  } = post || {};
+
   const latestPostLarge = index === 0;
   const latestPost = index === 1 || index === 2;
 
   const POST_INFO = [
-    { number: comment, icon: messageCircleFill },
-    { number: view, icon: eyeFill },
-    { number: share, icon: shareFill },
+    { number: metadata?.views || 0, icon: eyeFill },
+    { number: metadata?.shares || 0, icon: shareFill },
+    { number: metadata?.readTime || 0, icon: clockFill, suffix: " min read" },
   ];
 
   return (
-    <Grid
-      item
-      xs={12}
-      sm={latestPostLarge ? 12 : 6}
-      md={latestPostLarge ? 6 : 3}
-    >
+    <Grid item xs={12} sm={latestPostLarge ? 12 : 6} md={latestPostLarge ? 6 : 3}>
       <Card sx={{ position: "relative" }}>
         <CardMediaStyle
           sx={{
             ...((latestPostLarge || latestPost) && {
-              pt: "calc(100% * 4 / 3)",
-              "&:after": {
-                top: 0,
-                content: "''",
-                width: "100%",
-                height: "100%",
-                position: "absolute",
-                bgcolor: (theme) => alpha(theme.palette.grey[900], 0.72),
-              },
+              pt: 0,
+              zIndex: 0,
             }),
             ...(latestPostLarge && {
               pt: {
@@ -109,7 +117,6 @@ export default function BlogPostCard({ post, index }) {
           }}
         >
           <SvgIconStyle
-            color="paper"
             src="/static/icons/shape-avatar.svg"
             sx={{
               width: 80,
@@ -117,6 +124,7 @@ export default function BlogPostCard({ post, index }) {
               zIndex: 9,
               bottom: -15,
               position: "absolute",
+              color: "background.paper",
               ...((latestPostLarge || latestPost) && { display: "none" }),
             }}
           />
@@ -134,7 +142,7 @@ export default function BlogPostCard({ post, index }) {
             }}
           />
 
-          <CoverImgStyle alt={title} src={cover} />
+          <CoverImgStyle alt={title} src={coverImage} />
         </CardMediaStyle>
 
         <CardContent
@@ -147,20 +155,31 @@ export default function BlogPostCard({ post, index }) {
             }),
           }}
         >
-          <Typography
-            gutterBottom
-            variant="caption"
-            sx={{ color: "text.disabled", display: "block" }}
-          >
-            {fDate(createdAt)}
-          </Typography>
+          <Stack direction="row" spacing={1} mb={1}>
+            {categories?.map((category) => (
+              <Chip
+                key={category}
+                label={category}
+                size="small"
+                color="primary"
+                variant="outlined"
+              />
+            ))}
+            {status === 'draft' && (
+              <Chip
+                label="Draft"
+                size="small"
+                color="warning"
+              />
+            )}
+          </Stack>
 
           <TitleStyle
-            to="#"
             color="inherit"
             variant="subtitle2"
             underline="hover"
             component={RouterLink}
+            to={id ? `/dashboard/blog/post/${id}` : '#'}
             sx={{
               ...(latestPostLarge && { typography: "h5", height: 60 }),
               ...((latestPostLarge || latestPost) && {
@@ -170,6 +189,24 @@ export default function BlogPostCard({ post, index }) {
           >
             {title}
           </TitleStyle>
+
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{
+              mt: 1,
+              color: "text.disabled",
+              ...((latestPostLarge || latestPost) && {
+                color: "common.white",
+                opacity: 0.72,
+              }),
+            }}
+          >
+            <Typography variant="caption">{fDate(createdAt)}</Typography>
+            <Typography variant="caption">•</Typography>
+            <Typography variant="caption">{excerpt}</Typography>
+          </Stack>
 
           <InfoStyle>
             {POST_INFO.map((info, index) => (
@@ -191,6 +228,7 @@ export default function BlogPostCard({ post, index }) {
                 />
                 <Typography variant="caption">
                   {fShortenNumber(info.number)}
+                  {info.suffix || ''}
                 </Typography>
               </Box>
             ))}

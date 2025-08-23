@@ -1,44 +1,69 @@
 const Orders = require("../schemas/Orders.schema");
 
-const createOrder = async (orderObj) => {
-  const newOrder = new Orders(orderObj);
-  return await newOrder.save();
+// CREATE
+exports.createOrder = async (orderData) => {
+  try {
+    const order = new Orders(orderData);
+    return await order.save();
+  } catch (error) {
+    throw error;
+  }
 };
 
-const updateOrder = async (criteria, dataToUpdate, options = {}) => {
-  options["new"] = true;
-  options["lean"] = true;
-  return Orders.findOneAndUpdate(criteria, dataToUpdate, options);
+// READ
+exports.getOrders = async (query = {}) => {
+  try {
+    return await Orders.find(query)
+      .populate('customerId', 'firstName lastName email phoneNumber')
+      .populate('createdBy', 'name email');
+  } catch (error) {
+    throw error;
+  }
 };
 
-const deleteOrderById = async (orderId) => {
-  return Orders.deleteOne({ _id: orderId });
+exports.getOrderById = async (orderId) => {
+  try {
+    return await Orders.findById(orderId)
+      .populate('customerId', 'firstName lastName email phoneNumber')
+      .populate('createdBy', 'name email');
+  } catch (error) {
+    throw error;
+  }
 };
 
-const getOrdersPopulateData = async (searchObj, populateObj) => {
-  return Orders.find(searchObj)
-    .populate(populateObj)
-    .sort({ createdAt: -1 })
-    .collation({
-      locale: "en",
-      strength: 2,
-    });
+exports.getCustomerOrders = async (customerId) => {
+  try {
+    return await Orders.find({ customerId })
+      .populate('customerId', 'firstName lastName email phoneNumber')
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 });
+  } catch (error) {
+    throw error;
+  }
 };
 
-const getAggregateOrders = async (pipeline) => {
-  return Orders.aggregate(pipeline);
+// UPDATE
+exports.updateOrder = async (orderId, updateData) => {
+  try {
+    return await Orders.findByIdAndUpdate(
+      orderId,
+      { ...updateData, updatedAt: Date.now() },
+      { new: true }
+    ).populate('customerId', 'firstName lastName email phoneNumber')
+     .populate('createdBy', 'name email');
+  } catch (error) {
+    throw error;
+  }
 };
 
-const getOrdersCount = async (pipeline) => {
-  // return Orders.aggregate(pipeline);
-  return Orders.find(pipeline).countDocuments();
+// DELETE
+exports.deleteOrder = async (orderId) => {
+  try {
+    return await Orders.findByIdAndDelete(orderId);
+  } catch (error) {
+    throw error;
+  }
 };
 
-module.exports = {
-  createOrder,
-  updateOrder,
-  deleteOrderById,
-  getOrdersPopulateData,
-  getAggregateOrders,
-  getOrdersCount,
-};
+// Export the model for use in services
+exports.Orders = Orders;

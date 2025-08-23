@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
-import { Box, Container, Typography, Grid } from "@material-ui/core";
+import { experimentalStyled as styled } from "@mui/material/styles";
+import { Box, Container, Typography, Grid } from "@mui/material";
 //
 import { varWrapEnter, varFadeInRight, TextAnimate } from "../../animate";
 
@@ -9,9 +9,9 @@ import { varWrapEnter, varFadeInRight, TextAnimate } from "../../animate";
 
 const CONTACTS = [
   {
-    country: "London",
-    address: "71-75 Shelton Street, Covent garden, London WC2H 9JQ.",
-    phoneNumber: "+44(0)330 912 1773",
+    country: "India",
+    address: "Barampur, UP, 246731.",
+    phoneNumber: "+91(0)99717 14172",
   },
 ];
 

@@ -7,26 +7,73 @@ import {
   CardHeader,
   Stack,
   Divider,
-} from "@material-ui/core";
+  Alert,
+  CircularProgress,
+} from "@mui/material";
 
 import { gridSpacing } from "../../../utils/constant";
-import axiosInstance from "../../../axiosConfig";
+import { salesService } from "../../../services/sales.service";
 
-export default function TradeCard(props) {
+export default function TradeCard({ tradeId }) {
   const [cards, setCards] = useState([]);
   const [courses, setCourses] = useState([]);
   const [tests, setTests] = useState([]);
   const [qualifications, setQualifications] = useState([]);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const resp = await axiosInstance.get(`/trades/services/${props.tradeId}`);
-      setCards(resp.data[0]);
-      setCourses(resp.data[1]);
-      setTests(resp.data[2]);
-      setQualifications(resp.data[3]);
-    })();
-  }, [props]);
+    const fetchTradeData = async () => {
+      if (!tradeId) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await salesService.getTradeServices(tradeId);
+        console.log("Trade services response:", response);
+        
+        if (response && response.success) {
+          setCards(response.data.cards || []);
+          setCourses(response.data.courses || []);
+          setTests(response.data.tests || []);
+          setQualifications(response.data.qualifications || []);
+        } else {
+          throw new Error(response?.error || "Failed to fetch trade data");
+        }
+      } catch (err) {
+        console.error("Error fetching trade data:", err);
+        setError(err.message || "An error occurred while fetching trade data");
+        // Clear the data states in case of an error
+        setCards([]);
+        setCourses([]);
+        setTests([]);
+        setQualifications([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTradeData();
+  }, [tradeId]);
+
+  if (loading) {
+    return (
+      <CardContent style={{ textAlign: 'center', padding: '40px' }}>
+        <CircularProgress />
+      </CardContent>
+    );
+  }
+
+  if (error) {
+    return (
+      <CardContent>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      </CardContent>
+    );
+  }
 
   return (
     <React.Fragment>
@@ -40,7 +87,7 @@ export default function TradeCard(props) {
                 {qualifications?.length > 0 ? (
                   qualifications.map((qualification) => (
                     <Stack
-                      key={qualification.title}
+                      key={qualification._id || qualification.id}
                       direction="row"
                       alignItems="center"
                     >
@@ -55,7 +102,36 @@ export default function TradeCard(props) {
                     </Stack>
                   ))
                 ) : (
-                  <p style={{ color: "#0005" }}>No Course found</p>
+                  <Typography color="text.secondary">No qualifications found</Typography>
+                )}
+              </Stack>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Card>
+              <CardHeader title="Cards" />
+              <Divider />
+              <Stack spacing={2} sx={{ p: 3 }}>
+                {cards?.length > 0 ? (
+                  cards.map((card) => (
+                    <Stack
+                      key={card._id || card.id}
+                      direction="row"
+                      alignItems="center"
+                    >
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        color="text.primary"
+                        noWrap
+                      >
+                        {card.title}
+                      </Typography>
+                    </Stack>
+                  ))
+                ) : (
+                  <Typography color="text.secondary">No cards found</Typography>
                 )}
               </Stack>
             </Card>
@@ -69,7 +145,7 @@ export default function TradeCard(props) {
                 {courses?.length > 0 ? (
                   courses.map((course) => (
                     <Stack
-                      key={course.title}
+                      key={course._id || course.id}
                       direction="row"
                       alignItems="center"
                     >
@@ -84,7 +160,7 @@ export default function TradeCard(props) {
                     </Stack>
                   ))
                 ) : (
-                  <p style={{ color: "#0005" }}>No Course found</p>
+                  <Typography color="text.secondary">No courses found</Typography>
                 )}
               </Stack>
             </Card>
@@ -97,7 +173,11 @@ export default function TradeCard(props) {
               <Stack spacing={2} sx={{ p: 3 }}>
                 {tests?.length > 0 ? (
                   tests.map((test) => (
-                    <Stack key={test.title} direction="row" alignItems="center">
+                    <Stack
+                      key={test._id || test.id}
+                      direction="row"
+                      alignItems="center"
+                    >
                       <Typography
                         component="span"
                         variant="body2"
@@ -109,32 +189,7 @@ export default function TradeCard(props) {
                     </Stack>
                   ))
                 ) : (
-                  <p style={{ color: "#0005" }}>No Course found</p>
-                )}
-              </Stack>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <Card>
-              <CardHeader title="Cards" />
-              <Divider />
-              <Stack spacing={2} sx={{ p: 3 }}>
-                {cards?.length > 0 ? (
-                  cards.map((card) => (
-                    <Stack key={card.title} direction="row" alignItems="center">
-                      <Typography
-                        component="span"
-                        variant="body2"
-                        color="text.primary"
-                        noWrap
-                      >
-                        {card.title}
-                      </Typography>
-                    </Stack>
-                  ))
-                ) : (
-                  <p style={{ color: "#0005" }}>No Course found</p>
+                  <Typography color="text.secondary">No tests found</Typography>
                 )}
               </Stack>
             </Card>

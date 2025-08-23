@@ -1,66 +1,53 @@
 const express = require("express");
-const app = express();
+const router = express.Router();
 
-/**
- * register a User
- * get User details
- */
-app.use("/user", require("../api/v1/user/user.controller"));
+// User routes
+router.use("/user", require("../api/v1/user/user.controller"));
 
-/**
- * login a User
- */
-app.use("/auth", require("../api/v1/auth/auth.controller"));
+// Auth routes
+router.use("/auth", require("../api/v1/auth/auth.controller"));
 
-/**
- * card routes
- */
-app.use("/cards", require("../api/v1/cards/cards.controller"));
+// Blog routes
+router.use("/blogs", require("../api/v1/blogs/blog.controller"));
 
-/**
- * center routes
- */
-app.use("/centers", require("../api/v1/centers/centers.controller"));
+// Card routes
+router.use("/cards", require("../api/v1/cards/cards.controller"));
 
-/**
- * course routes
- */
-app.use("/courses", require("../api/v1/courses/courses.controller"));
+// Center routes
+router.use("/centers", require("../api/v1/centers/centers.controller"));
 
-/**
- * faqs routes
- */
-app.use("/others", require("../api/v1/others/others.controller"));
+// Course routes
+router.use("/courses", require("../api/v1/courses/courses.controller"));
 
-/**
- * qualification routes
- */
-app.use(
-  "/qualifications",
-  require("../api/v1/qualifications/qualifications.controller")
-);
+// Other routes (FAQs)
+router.use("/others", require("../api/v1/others/others.controller"));
 
-/**
- * test routes
- */
-app.use("/tests", require("../api/v1/tests/tests.controller"));
+// Qualification routes
+router.use("/qualifications", require("../api/v1/qualifications/qualifications.controller"));
 
-/**
- * trade routes
- */
-app.use("/trades", require("../api/v1/trades/trades.controller"));
+// Test routes
+router.use("/tests", require("../api/v1/tests/tests.controller"));
 
-/**
- * manage orders
- */
-app.use("/orders", require("../api/v1/orders/orders.controller"));
+// Trade routes
+router.use("/trades", require("../api/v1/trades/trades.controller"));
 
-/**
- * manage applications
- */
-app.use(
-  "/applications",
-  require("../api/v1/applications/applications.controller")
-);
+// Trade Service Associations routes
+console.log('Registering trade-service-associations routes');
+router.use("/trade-service-associations", require("../api/v1/trades/tradeServiceAssociations.controller"));
 
-module.exports = app;
+// Order routes
+router.use("/orders", require("../api/v1/orders/orders.controller"));
+
+// Payment routes
+const paymentsRoutes = require("../api/v1/payments/payments.controller");
+
+// Mount payments routes
+router.use("/payments", paymentsRoutes);
+
+//Customer routes
+router.use("/customers", require("../api/v1/customers/customers.controller"));
+
+// Application routes
+router.use("/applications", require("../api/v1/applications/applications.controller"));
+
+module.exports = router;

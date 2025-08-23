@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 // material
-import { styled } from "@material-ui/styles";
+import { styled } from "@mui/material/styles";
 //
 import DashboardNavbar from "./DashboardNavbar";
 import DashboardSidebar from "./DashboardSidebar";
 import AuthService from "../../services/auth.service";
+import ThemeToggle from "../../components/ThemeToggle";
+import DashboardThemeProvider from "../../theme/DashboardThemeProvider";
+import { ThemeProvider } from "../../theme/ThemeContext";
 
 // ----------------------------------------------------------------------
 
@@ -35,8 +38,7 @@ const MainStyle = styled("div")(({ theme }) => ({
 
 export default function DashboardLayout() {
   const [open, setOpen] = useState(false);
-
-  const [currentUser, setCurrentUser] = useState({});
+  const [user, setUser] = useState({});
 
   useEffect(() => {
     // check if logged in
@@ -45,27 +47,31 @@ export default function DashboardLayout() {
       if (!user) {
         window.location.replace("/auth/login");
       }
-      if (!["superadmin", "admin"].includes(user?.accountType)) {
-        alert("We know you are sneaking. You do not have Admin access");
+      if (!["superadmin", "admin", "sales"].includes(user?.accountType)) {
+        alert("You do not have access to this area");
         await AuthService.logout();
         window.location.replace("/auth/login");
-      } else {
-        setCurrentUser(user);
       }
+      setUser(user);
     })();
   }, []);
 
   return (
-    <RootStyle>
-      <DashboardNavbar onOpenSidebar={() => setOpen(true)} {...currentUser} />
-      <DashboardSidebar
-        isOpenSidebar={open}
-        onCloseSidebar={() => setOpen(false)}
-        {...currentUser}
-      />
-      <MainStyle>
-        <Outlet />
-      </MainStyle>
-    </RootStyle>
+    <ThemeProvider>
+      <DashboardThemeProvider>
+        <RootStyle>
+          <DashboardNavbar onOpenSidebar={() => setOpen(true)} user={user} />
+          <DashboardSidebar
+            isOpenSidebar={open}
+            onCloseSidebar={() => setOpen(false)}
+            user={user}
+          />
+          <MainStyle>
+            <Outlet />
+          </MainStyle>
+          <ThemeToggle />
+        </RootStyle>
+      </DashboardThemeProvider>
+    </ThemeProvider>
   );
 }

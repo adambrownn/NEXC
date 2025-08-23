@@ -1,39 +1,34 @@
 import * as React from "react";
-import TextField from "@mui/material/TextField";
 import { enGB } from "date-fns/locale";
-import AdapterDateFns from "@mui/lab/AdapterDateFns";
-import LocalizationProvider from "@mui/lab/LocalizationProvider";
-import DatePicker from "@mui/lab/DatePicker";
-import { FormControl, InputLabel, MenuItem, Select } from "@material-ui/core";
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 
-export default function DateTimePickers(props) {
-  const { testDate, setTestDate, testTime, setTestTime } = React.useContext(
-    props.dateTimeContext
-  );
-
+export default function DateTimePickers({ testDate, setTestDate, testTime, setTestTime, handleSaveToItem }) {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} locale={enGB}>
       <DatePicker
         label="Test Date"
-        value={testDate}
+        value={testDate || null}
         onChange={(newValue) => {
-          props.handleSaveToItem(newValue, "testDate");
+          handleSaveToItem(newValue, "testDate");
           setTestDate(newValue);
         }}
-        renderInput={(params) => <TextField {...params} />}
+        slotProps={{ textField: { fullWidth: true } }}
       />
       <FormControl fullWidth>
-        <InputLabel id="demo-simple-select-label">Time slot</InputLabel>
+        <InputLabel id="time-slot-label">Time slot</InputLabel>
         <Select
-          labelId="cards-id"
+          labelId="time-slot-label"
           label="Select a Time slot"
-          id="demo-simple-select"
+          id="time-slot-select"
           name="new-renew"
+          value={testTime || ""}
           onChange={(e) => {
-            props.handleSaveToItem(e.target.value, "testTime");
+            handleSaveToItem(e.target.value, "testTime");
             setTestTime(e.target.value);
           }}
-          value={testTime}
         >
           {[
             "07:00 AM - 08:00 AM",
@@ -46,11 +41,9 @@ export default function DateTimePickers(props) {
             "14:00 PM - 15:00 PM",
             "15:00 PM - 16:00 PM",
             "16:00 PM - 17:00 PM",
-            "17:00 PM - 18:00 PM",
-            "18:00 PM - 19:00 PM",
-          ].map((value, index) => (
-            <MenuItem value={value} key={index}>
-              {value}{" "}
+          ].map((time) => (
+            <MenuItem key={time} value={time}>
+              {time}
             </MenuItem>
           ))}
         </Select>

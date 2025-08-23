@@ -7,9 +7,9 @@ import {
   DialogContent,
   DialogActions,
   DialogContentText,
-  Typography,
-} from "@material-ui/core";
-import InfoIcon from "@material-ui/icons/Info";
+  // Typography,
+} from "@mui/material";
+import InfoIcon from "@mui/icons-material/Info";
 
 const LearnMoreContext = React.createContext();
 
@@ -48,34 +48,37 @@ export default function ApplicationInfo(props) {
           <DialogTitle sx={{ pb: 2 }}>{props.title} </DialogTitle>
 
           <DialogContent dividers={true}>
-            {props.validity && (
-              <Typography variant="body2" color="text.secondary">
-                <strong>Validity:</strong> {props.validity}
-              </Typography>
-            )}
+  {props.validity && (
+    <DialogContentText variant="body2" color="text.secondary">
+      <strong>Validity:</strong> {props.validity}
+    </DialogContentText>
+  )}
             {props.duration && (
-              <Typography variant="body2" color="text.secondary">
-                <strong>Duration:</strong> {props.duration}
-              </Typography>
-            )}
+    <DialogContentText variant="body2" color="text.secondary">
+      <strong>Duration:</strong> {props.duration}
+    </DialogContentText>
+  )}
             {props.numberOfQuestions && (
-              <Typography variant="body2" color="text.secondary">
-                <strong>Number of Questions:</strong> {props.numberOfQuestions}
-              </Typography>
-            )}
+    <DialogContentText variant="body2" color="text.secondary">
+      <strong>Number of Questions:</strong> {props.numberOfQuestions}
+    </DialogContentText>
+  )}
             {props.isOnline && (
-              <Typography variant="body2" color="text.secondary">
-                <strong>Mode: </strong> offline{props.isOnline && "/online"}
-              </Typography>
-            )}
+    <DialogContentText variant="body2" color="text.secondary">
+      <strong>Mode: </strong> offline{props.isOnline && "/online"}
+    </DialogContentText>
+  )}
             {props.description && (
-              <DialogContentText id="scroll-dialog-description" tabIndex={-1}>
-                <Typography variant="body2" color="text.secondary">
-                  {props.description}
-                </Typography>
-              </DialogContentText>
-            )}
-          </DialogContent>
+    <DialogContentText 
+      id="scroll-dialog-description" 
+      tabIndex={-1}
+      variant="body2" 
+      color="text.secondary"
+    >
+      {props.description}
+    </DialogContentText>
+  )}
+</DialogContent>
           <DialogActions>
             <Button onClick={handleLearnMoreClose}>Close</Button>
           </DialogActions>

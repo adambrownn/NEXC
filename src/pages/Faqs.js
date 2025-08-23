@@ -1,6 +1,6 @@
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
-import { Grid, Container, Typography } from "@material-ui/core";
+import { experimentalStyled as styled } from "@mui/material/styles";
+import { Grid, Container, Typography } from "@mui/material";
 // components
 import Page from "../components/Page";
 import {

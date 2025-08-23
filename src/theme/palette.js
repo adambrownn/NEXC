@@ -1,4 +1,4 @@
-import { alpha } from "@material-ui/core/styles";
+import { alpha } from "@mui/material/styles";
 
 // ----------------------------------------------------------------------
 
@@ -98,7 +98,17 @@ const palette = {
   gradients: GRADIENTS,
   divider: GREY[500_24],
   text: { primary: GREY[800], secondary: GREY[600], disabled: GREY[500] },
-  background: { paper: "#fff", default: "#fff", neutral: GREY[200] },
+  background: { 
+    paper: "#fff", 
+    default: GREY[100],  
+    neutral: GREY[200],
+    checkout: {
+      default: GREY[100],
+      paper: "#fff",
+      card: "#fff",
+      highlight: PRIMARY.lighter
+    }
+  },
   action: {
     active: GREY[600],
     hover: GREY[500_8],

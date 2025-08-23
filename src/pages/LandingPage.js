@@ -1,5 +1,5 @@
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
+import { experimentalStyled as styled } from "@mui/material/styles";
 import { AboutTestimonials } from "../components/_external-pages/about";
 // components
 import Page from "../components/Page";
@@ -24,7 +24,7 @@ const ContentStyle = styled("div")(({ theme }) => ({
 
 export default function LandingPage() {
   return (
-    <RootStyle title="Construction Safety Line" id="move_top">
+    <RootStyle title="NEXC" id="move_top">
       <LandingHero />
       <ContentStyle>
         <LandingMinimal />

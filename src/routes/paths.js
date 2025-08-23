@@ -36,6 +36,7 @@ export const PATH_PAGE = {
   cancellation: "/policies#cancellation",
   return: "/policies#return",
   faqs: "/faqs",
+  blog: "/blog",
   page404: "/404",
   page500: "/500",
   trades: "/trades",
@@ -49,11 +50,12 @@ export const CATEGORY_PATH = {
     cscs: categoryPath("cscs", "csl-cards"),
     skill: categoryPath("skill", "csl-cards"),
     cisrs: categoryPath("cisrs", "csl-cards"),
+    cpcs: categoryPath("cpcs", "csl-cards"),
   },
   courses: {
-    operative: categoryPath("operative", "csl-courses"),
-    managerial: categoryPath("managerial-and-directoral", "csl-courses"),
-    supervision: categoryPath("supervision", "csl-courses"),
+    citb: categoryPath("citb", "csl-courses"),
+    healthandsafety: categoryPath("health-and-safety", "csl-courses"),
+    plantoperations: categoryPath("plant-opertions", "csl-courses"),
     scaffolding: categoryPath("scaffolding", "csl-courses"),
   },
   tests: {
@@ -71,14 +73,29 @@ export const PATH_DASHBOARD = {
     sale: path(ROOTS_DASHBOARD, "/booked"),
     applications: path(ROOTS_DASHBOARD, "/applications"),
     users: path(ROOTS_DASHBOARD, "/users"),
-
-    app: path(ROOTS_DASHBOARD, ""),
+    app: path(ROOTS_DASHBOARD, "/app"),
+    sales: path(ROOTS_DASHBOARD, "/sales"),
     management: path(ROOTS_DASHBOARD, "/trades"),
     services: path(ROOTS_DASHBOARD, "/cards"),
+    calls: path(ROOTS_DASHBOARD, '/calls'),
     others: path(ROOTS_DASHBOARD, "/faqs"),
+    blog: path(ROOTS_DASHBOARD, "/blog"),
   },
 
-  trades: path(ROOTS_DASHBOARD, "/trades"),
+  service: {
+    root: path(ROOTS_DASHBOARD, "/service"),
+    requests: path(ROOTS_DASHBOARD, "/service/requests"),
+    technicians: path(ROOTS_DASHBOARD, "/service/technicians"),
+    chat: path(ROOTS_DASHBOARD, "/service/chat"),
+  },
+
+  trades: {
+    root: path(ROOTS_DASHBOARD, "/trades"),
+  },
+
+  tradeServiceAssociations: {
+    root: path(ROOTS_DASHBOARD, "/trades/service-associations"),
+  },
 
   cards: {
     root: path(ROOTS_DASHBOARD, "/cards"),
@@ -100,7 +117,12 @@ export const PATH_DASHBOARD = {
     root: path(ROOTS_DASHBOARD, "/qualifications"),
     create: path(ROOTS_DASHBOARD, "/qualifications/create"),
   },
-
+  blog: {
+    root: path(ROOTS_DASHBOARD, '/blog'),
+    new: path(ROOTS_DASHBOARD, '/blog/new'),
+    view: path(ROOTS_DASHBOARD, '/blog/:id'),
+    edit: path(ROOTS_DASHBOARD, '/blog/:id/edit')
+  },
   faq: {
     root: path(ROOTS_DASHBOARD, "/faqs"),
   },

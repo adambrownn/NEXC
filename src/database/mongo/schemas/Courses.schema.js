@@ -1,11 +1,12 @@
 const mongoose = require("mongoose");
+const modelRegistry = require('../modelRegistry');
 
 const courseSchema = mongoose.Schema({
   title: { type: String, required: [true, "Course Name is required"] },
-  price: { type: Number },
+  price: { type: Number, required: true, min: 0 },
   tradeId: {
     type: String,
-    required: [true, "Trade Id is required."],
+    // required: [true, "Trade Id is required."],
     ref: "trades",
   },
   category: { type: String, required: [true, "Course Category is required"] },
@@ -15,7 +16,18 @@ const courseSchema = mongoose.Schema({
   description: String,
   isAvailable: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 
-const Course = mongoose.model("courses", courseSchema);
-module.exports = Course;
+courseSchema.index({ title: 'text', description: 'text', category: 'text' });
+
+courseSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
+});
+
+// Register schema with the registry instead of creating model directly
+modelRegistry.registerSchema("courses", courseSchema);
+
+// Export the schema for reference
+module.exports = courseSchema;

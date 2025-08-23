@@ -1,112 +1,140 @@
+import React from 'react';
 // material
 import {
   alpha,
   useTheme,
   experimentalStyled as styled,
-} from "@material-ui/core/styles";
+} from "@mui/material/styles";
 import {
   Box,
   Grid,
   Card,
   Container,
   Typography,
-  useMediaQuery,
-} from "@material-ui/core";
+  Button,
+} from "@mui/material";
 //
 import { HashLink as Link } from "react-router-hash-link";
+import { motion } from "framer-motion";
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+
+// Import Material Icons instead of using static SVGs
+import CardMembershipIcon from '@mui/icons-material/CardMembership';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import SchoolIcon from '@mui/icons-material/School';
+import EngineeringIcon from '@mui/icons-material/Engineering';
 
 const CARDS = [
   {
     path: "/trades#csl-cards",
-    icon: "/static/icons/ic_design.svg",
+    icon: <CardMembershipIcon style={{ fontSize: 36 }} />,
     title: "CSCS Cards",
+    color: "#2196f3", // blue shade
     description:
-      "Cards plays a crucial role in UK construction Industry. Having a right CSCS Card shows you are qualified and aware about health and safety of construction sites.",
+      "Essential for UK construction site access, CSCS cards verify your qualifications and health & safety knowledge. Fast application processing available.",
+    cta: "Get Your Card →",
   },
   {
     path: "/trades#csl-tests",
-    icon: "/static/icons/ic_code.svg",
-    title: "HS&E Test",
+    icon: <HealthAndSafetyIcon style={{ fontSize: 36 }} />,
+    title: "Health & Safety Test",
+    color: "#f44336", // red shade
     description:
-      "Test is an important exam of any construction worker training process, passing a test make sure workers can work securely on sites.",
+      "Book your CITB Health, Safety & Environment test with real time availability check. Required for all CSCS cards. Preparation materials included.",
+    cta: "Book Test →",
   },
   {
     path: "/trades#csl-courses",
-    icon: "/static/brand/logo_single.svg",
-    title: "Courses",
+    icon: <EngineeringIcon style={{ fontSize: 36 }} />,
+    title: "Construction Courses",
+    color: "#4caf50", // green shade
     description:
-      "Courses and trainings are major section for construction workers. Courses helps individual with required knowledge to improve their skills and establish safe working conditions.",
+      "Expert-led training for construction skills and safety certification. UK-recognized courses to enhance your career and improve site safety.",
+    cta: "Find Courses →",
   },
   {
     path: "/qualifications",
-    icon: "/static/icons/ic_qualification.svg",
-    title: "Qualification",
+    icon: <SchoolIcon style={{ fontSize: 36 }} />,
+    title: "NVQ Qualifications",
+    color: "#ff9800", // orange shade
     description:
-      "National Vocational Qualification (NVQ's) are lifetime qualification awards which are obtained through trainings or assesments while working on sites.",
+      "Earn lifetime NVQ qualifications through on-site assessment. Level 2 & Level 3 NVQs available for all construction trades to secure your CSCS card.",
+    cta: "Explore NVQs →",
   },
 ];
 
-const shadowIcon = (color) => `drop-shadow(2px 2px 2px ${alpha(color, 0.48)})`;
-
 const RootStyle = styled("div")(({ theme }) => ({
   paddingTop: theme.spacing(15),
+  paddingBottom: theme.spacing(10),
+  position: "relative",
+  backgroundColor: theme.palette.background.neutral,
   [theme.breakpoints.up("md")]: {
     paddingBottom: theme.spacing(15),
   },
+  "&:before": {
+    content: '""',
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backgroundImage: "radial-gradient(rgba(0,0,0,0.02) 1px, transparent 1px)",
+    backgroundSize: "20px 20px",
+  }
 }));
 
-const CardStyle = styled(Card)(({ theme }) => {
-  const shadowCard = (opacity) =>
-    theme.palette.mode === "light"
-      ? alpha(theme.palette.grey[500], opacity)
-      : alpha(theme.palette.common.black, opacity);
+const CardStyle = styled(motion.div)(({ theme }) => ({
+  height: '100%',
+  position: "relative",
+  borderRadius: theme.shape.borderRadiusMd,
+  transition: "all 0.3s ease",
+  "&:hover": {
+    transform: "translateY(-8px)",
+  },
+}));
 
-  return {
-    maxWidth: 380,
-    minHeight: 440,
-    margin: "auto",
-    textAlign: "center",
-    padding: theme.spacing(10, 5, 0),
-    boxShadow: `-40px 40px 80px 0 ${shadowCard(0.48)}`,
-    [theme.breakpoints.up("md")]: {
-      boxShadow: "none",
-      backgroundColor:
-        theme.palette.grey[theme.palette.mode === "light" ? 200 : 800],
-    },
-    "&.cardLeft": {
-      [theme.breakpoints.up("md")]: { marginTop: -40 },
-    },
-    "&.cardCenter": {
-      [theme.breakpoints.up("md")]: {
-        marginTop: -80,
-        backgroundColor: theme.palette.background.paper,
-        boxShadow: `-40px 40px 80px 0 ${shadowCard(0.4)}`,
-        "&:before": {
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: -1,
-          content: "''",
-          margin: "auto",
-          position: "absolute",
-          width: "calc(100% - 40px)",
-          height: "calc(100% - 40px)",
-          borderRadius: theme.shape.borderRadiusMd,
-          backgroundColor: theme.palette.background.paper,
-          boxShadow: `-20px 20px 40px 0 ${shadowCard(0.12)}`,
-        },
-      },
-    },
-  };
-});
+const CardInner = styled(Card)(({ theme, color }) => ({
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  padding: theme.spacing(5),
+  borderRadius: theme.shape.borderRadiusMd,
+  boxShadow: `0 10px 40px 0 ${alpha(theme.palette.grey[500], 0.12)}`,
+  transition: "all 0.3s ease",
+  position: "relative",
+  overflow: "hidden",
+  "&:before": {
+    content: '""',
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "8px",
+    backgroundColor: color || theme.palette.primary.main,
+  },
+  "&:hover": {
+    boxShadow: `0 20px 50px 0 ${alpha(theme.palette.grey[500], 0.2)}`,
+  },
+}));
 
-const CardIconStyle = styled("img")(({ theme }) => ({
-  width: 190,
-  height: 140,
-  margin: "-3% auto auto auto",
-  marginBottom: theme.spacing(1),
-  filter: shadowIcon(theme.palette.primary.main),
+const CardIconStyle = styled("div")(({ theme, color }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 64,
+  height: 64,
+  borderRadius: "50%",
+  marginBottom: theme.spacing(3),
+  color: color || theme.palette.primary.main,
+  backgroundColor: alpha(color || theme.palette.primary.main, 0.08),
+}));
+
+const SectionHeading = styled(Box)(({ theme }) => ({
+  textAlign: "center",
+  marginBottom: theme.spacing(8),
+  [theme.breakpoints.up("md")]: {
+    marginBottom: theme.spacing(10),
+  },
 }));
 
 // ----------------------------------------------------------------------
@@ -114,60 +142,112 @@ const CardIconStyle = styled("img")(({ theme }) => ({
 export default function LandingMinimalHelps() {
   const theme = useTheme();
   const isLight = theme.palette.mode === "light";
-  const isDesktop = useMediaQuery(theme.breakpoints.up("lg"));
 
   return (
     <RootStyle>
       <Container maxWidth="lg">
-        <Box sx={{ mb: { xs: 10, md: 25 } }}>
+        <SectionHeading>
           <Typography
             component="p"
             variant="overline"
-            sx={{ mb: 2, color: "text.secondary", textAlign: "center" }}
+            sx={{
+              mb: 2,
+              color: "text.secondary",
+              fontWeight: 600,
+              letterSpacing: 2,
+              display: "inline-block",
+              px: 2,
+              py: 0.5,
+              borderRadius: 1,
+              bgcolor: alpha(theme.palette.primary.main, 0.08)
+            }}
           >
-            Construction Safety line
+            UK CONSTRUCTION SERVICES
           </Typography>
 
-          <Typography variant="h2" sx={{ textAlign: "center" }}>
-            Choose your products
+          <Typography variant="h2" sx={{ mb: 3 }}>
+            Complete Construction Certification Solutions
           </Typography>
-        </Box>
 
-        <Grid container spacing={isDesktop ? 10 : 5}>
+          <Typography
+            variant="body1"
+            sx={{
+              maxWidth: 650,
+              mx: 'auto',
+              color: 'text.secondary',
+              mb: 4,
+              px: 2
+            }}
+          >
+            Everything you need to work legally and safely on UK construction sites - from CSCS cards
+            and CITB tests to NVQ qualifications and specialized training courses.
+          </Typography>
+        </SectionHeading>
+
+        <Grid container spacing={4}>
           {CARDS.map((card, index) => (
-            <Grid
-              key={card.title}
-              item
-              xs={12}
-              md={6}
-              style={{ margin: "3% auto" }}
-            >
-              <Link to={card.path} style={{ textDecoration: "none" }}>
-                <CardStyle className={"cardCenter"}>
-                  <CardIconStyle
-                    src={card.icon}
-                    alt={card.title}
+            <Grid key={card.title} item xs={12} sm={6} md={6} lg={3}>
+              <CardStyle
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: 0.5,
+                    delay: index * 0.1
+                  }
+                }}
+                viewport={{ once: true }}
+              >
+                <CardInner color={card.color}>
+                  <CardIconStyle color={card.color}>
+                    {card.icon}
+                  </CardIconStyle>
+
+                  <Typography
+                    variant="h5"
+                    component="h3"
                     sx={{
-                      ...(index === 0 && {
-                        filter: (theme) => shadowIcon(theme.palette.info.main),
-                      }),
-                      ...(index === 1 && {
-                        filter: (theme) => shadowIcon(theme.palette.error.main),
-                      }),
+                      mb: 2,
+                      fontWeight: 700
                     }}
-                  />
-                  <Typography variant="h5" paragraph>
+                  >
                     {card.title}
                   </Typography>
+
                   <Typography
                     sx={{
-                      color: isLight ? "text.secondary" : "common.white",
+                      color: isLight ? "text.secondary" : "text.primary",
+                      mb: 3,
+                      flexGrow: 1
                     }}
                   >
                     {card.description}
                   </Typography>
-                </CardStyle>
-              </Link>
+
+                  <Link
+                    to={card.path}
+                    style={{
+                      textDecoration: "none",
+                      display: "inline-block"
+                    }}
+                  >
+                    <Button
+                      variant="text"
+                      color="primary"
+                      endIcon={<ArrowForwardIcon />}
+                      sx={{
+                        fontWeight: 600,
+                        '&:hover': {
+                          backgroundColor: alpha(card.color, 0.08),
+                        }
+                      }}
+                    >
+                      {card.cta}
+                    </Button>
+                  </Link>
+                </CardInner>
+              </CardStyle>
             </Grid>
           ))}
         </Grid>

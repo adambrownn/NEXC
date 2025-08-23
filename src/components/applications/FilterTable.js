@@ -2,15 +2,15 @@ import PropTypes from "prop-types";
 import { Icon } from "@iconify/react";
 import searchFill from "@iconify/icons-eva/search-fill";
 // material
-import ReplayIcon from "@material-ui/icons/Replay";
-import { styled } from "@material-ui/styles";
+import ReplayIcon from '@mui/icons-material/Replay';
+import { styled } from "@mui/material/styles";
 import {
   Box,
   Toolbar,
   IconButton,
   OutlinedInput,
   InputAdornment,
-} from "@material-ui/core";
+} from "@mui/material";
 
 // ----------------------------------------------------------------------
 

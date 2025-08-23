@@ -1,71 +1,30 @@
 const express = require("express");
-const {
-  extractTokenDetails,
-} = require("../../../common/services/auth.service");
-const OrdersService = require("./orders.service");
+const router = express.Router();
+const ordersService = require("./orders.service");
+const { extractTokenDetails } = require("../../../common/services/auth.service");
 
-const router = express();
+// Create order
+router.post("/", extractTokenDetails, ordersService.createOrder);
 
-router
-  .route("/")
-  /**
-   *
-   * @param {searchId} req
-   * @returns populated Order details
-   */
-  .get(extractTokenDetails, OrdersService.getOrders)
-  /**
-   *
-   * @param {} req
-   * @returns populated Order details
-   */
-  .post(extractTokenDetails, OrdersService.getAggregateOrders);
+// Get orders with filters
+router.get("/", extractTokenDetails, ordersService.getOrders);
 
-router
-  .route("/create")
-  /**
-   *
-   * @param  req
-   * @returns created order
-   */
-  .post(OrdersService.createOrder);
+// Get customer orders
+router.get("/customers/:customerId", extractTokenDetails, ordersService.getCustomerOrders);
 
-router
-  .route("/search")
-  /**
-   *
-   * @param {searchId} req
-   * @returns populated Order details
-   */
-  .get(extractTokenDetails, OrdersService.getOrdersCount);
+// Get order details
+router.get("/:orderId", extractTokenDetails, ordersService.getOrderDetails);
 
-router
-  .route("/:orderId")
-  /**
-   *
-   * @param {orderId} req
-   * @returns populated Order details
-   */
-  .get(OrdersService.getOrderDetails)
-  /**
-   *
-   * @param  {orderId} req
-   * @returns updated order
-   */
-  .put(OrdersService.updateOrderData)
-  /**
-   *
-   * @param  {orderId} req
-   * @returns
-   */
-  .delete(extractTokenDetails, OrdersService.deleteOrder);
+// Update order
+router.put("/:orderId", extractTokenDetails, ordersService.updateOrderData);
 
-router
-  .route("/payment/:orderId")
-  /**
-   *
-   * @param  {orderId} req
-   * @returns updated order for payment
-   */
-  .put(OrdersService.orderPayment);
+// Delete order
+router.delete("/:orderId", extractTokenDetails, ordersService.deleteOrder);
+
+// Process payment
+router.post("/payment", extractTokenDetails, ordersService.orderPayment);
+
+// Get aggregate orders (admin only)
+router.post("/aggregate", extractTokenDetails, ordersService.getAggregateOrders);
+
 module.exports = router;

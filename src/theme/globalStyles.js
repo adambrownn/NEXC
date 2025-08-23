@@ -1,5 +1,4 @@
-import { withStyles } from "@material-ui/styles";
-
+import { withStyles } from '@mui/styles';
 // ----------------------------------------------------------------------
 
 const GlobalStyles = withStyles((theme) => ({

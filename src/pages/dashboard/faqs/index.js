@@ -15,9 +15,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
-} from "@material-ui/core";
+} from "@mui/material";
 
-import { Save as SaveIcon } from "@material-ui/icons";
+import SaveIcon from '@mui/icons-material/Save';
 
 import SubCard from "../../../components/_dashboard/cards/SubCard";
 import { gridSpacing } from "../../../utils/constant";

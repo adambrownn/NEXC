@@ -2,53 +2,87 @@ import axios from "axios";
 import AuthHeader from "./services/auth-header";
 import authService from "./services/auth.service";
 
+// const isDevelopment = process.env.NODE_ENV !== 'production';
+
+const baseURL = process.env.REACT_APP_API_BASE_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? "https://api.nexc.co.uk"
+    : `${window.location.protocol}//${window.location.hostname}:8080`);
+
 const axiosInstance = axios.create({
-  // baseURL: "http://localhost:8080/v1",
-  baseURL: "https://constructionsafetyline.co.uk/v1",
+  baseURL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  withCredentials: true
 });
 
-(async () => {
-  const headerAccessToken = await AuthHeader.getAuthHeaderToken();
-  axiosInstance.defaults.headers.common["authorization"] =
-    headerAccessToken.authorizationToken;
-  axiosInstance.defaults.headers.post["Content-Type"] = "application/json";
+// Request interceptor
+axiosInstance.interceptors.request.use(
+  async (config) => {
+    try {
+      // Add version prefix to URL if not already present
+      const url = config.url || '';
 
-  axiosInstance.interceptors.request.use(
-    (request) => {
-      // console.log("axios request");
-      // console.log(request);
-      // Edit request config
-      return request;
-    },
-    (error) => {
-      // console.log(error);
+      // Add /v1 prefix if the URL doesn't already have it and isn't a health check
+      if (!url.startsWith('/v1') && !url.startsWith('/health')) {
+        config.url = `/v1${url}`;
+      }
+
+      const headerAccessToken = await AuthHeader.getAuthHeaderToken();
+      if (headerAccessToken?.authorizationToken) {
+        config.headers.authorization = headerAccessToken.authorizationToken;
+      }
+      return config;
+    } catch (error) {
+      console.error('Error in request interceptor:', error);
       return Promise.reject(error);
     }
-  );
+  },
+  (error) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
 
-  axiosInstance.interceptors.response.use(
-    (response) => {
-      // console.log("axios response");
-      // console.log(response);
-      if (
-        ["JWT expired.", "Auth token missing", "Invalid Token."].includes(
-          response.data.err
-        )
-      ) {
+// Response interceptor
+axiosInstance.interceptors.response.use(
+  (response) => {
+    // Check if response is HTML when we expect JSON
+    const contentType = response.headers['content-type'];
+    if (contentType && contentType.includes('text/html') && !response.config.url.includes('/health')) {
+      return Promise.reject(new Error('Received HTML response when expecting JSON'));
+    }
+
+    if (response.data?.err && ["JWT expired.", "Auth token missing", "Invalid Token."].includes(response.data.err)) {
+      authService.logout();
+      window.location.replace("/auth/login");
+      return Promise.reject(new Error('Authentication failed'));
+    }
+
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      if (error.response.status === 404) {
+        console.error('404 Error: Resource not found');
+      } else if (error.response.status === 401) {
         authService.logout();
-        window.location.replace("/aut/login");
+        window.location.replace("/auth/login");
       }
-      // Edit response config
-      return response;
-    },
-    (error) => {
-      // console.log(error);
-      if (error.message === "Network Error") {
-        window.location.reload();
-      }
-      return Promise.reject(error);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('Network Error: No response received');
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Request Error:', error.message);
     }
-  );
-})();
+    return Promise.reject(error);
+  }
+);
 
 export default axiosInstance;

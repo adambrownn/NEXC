@@ -15,6 +15,7 @@ module.exports.createCard = async (req, res) => {
   }
 };
 
+
 // READ
 module.exports.getCards = async (req, res) => {
   // TODO: filter experiment
@@ -37,13 +38,28 @@ module.exports.getCards = async (req, res) => {
   //   ];
   // }
 
-  const filterCriteria = {};
-  if (req.query.tradeId) {
-    filterCriteria.tradeId = req.query.tradeId;
-  }
+  try {
+    const filterCriteria = {};
+    
+    if (req.query.tradeId) {
+      // Handle single trade ID
+      // const tradeId = Array.isArray(req.query.tradeId)
+      filterCriteria.tradeId = req.query.tradeId;
+    }
 
-  const cardsList = await cardRepository.getCards(filterCriteria);
-  res.json(cardsList);
+    if (req.query.category) {
+      filterCriteria.category = req.query.category;
+    }
+
+    console.log('Calling cardRepository.getCards with filterCriteria:', JSON.stringify(filterCriteria));
+    const cardsList = await cardRepository.getCards(filterCriteria);
+    console.log('cardsList received:', JSON.stringify(cardsList));
+    res.json(cardsList);
+  } catch (e) {
+    console.error(e);
+    console.error('Error in getCards service:', e);
+    res.status(500).json({ err: e.message });
+  }
 };
 
 module.exports.getCardById = async (req, res) => {
@@ -54,7 +70,7 @@ module.exports.getCardById = async (req, res) => {
       createdAt: -1,
     };
 
-    const limit = reqObj.limit || 500;
+     const limit = reqObj.limit || 500;
 
     const searchReqObj = {
       _id: req.params.cardId,

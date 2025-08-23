@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="750" height="471" viewBox="0 0 750 471" xmlns="http://www.w3.org/2000/svg">
+  <rect width="750" height="471" rx="40" fill="#fff" stroke="#E3E3E3" stroke-width="1"/>
+  <g transform="translate(150, 150)">
+    <rect x="0" y="0" width="450" height="180" rx="10" fill="#005498"/>
+    <path d="M225,30 l60,60 l-60,60 l-60,-60 z" fill="#FFCB05"/>
+    <path d="M75,50 h90 v15 h-90 z" fill="#FFF"/>
+    <path d="M75,80 h90 v15 h-90 z" fill="#FFF"/>
+    <path d="M75,110 h90 v15 h-90 z" fill="#FFF"/>
+    <path d="M285,50 h90 v15 h-90 z" fill="#FFF"/>
+    <path d="M285,80 h90 v15 h-90 z" fill="#FFF"/>
+    <path d="M285,110 h90 v15 h-90 z" fill="#FFF"/>
+  </g>
+</svg>

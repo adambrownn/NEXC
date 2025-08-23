@@ -4,14 +4,14 @@ import {
   Grid,
   InputAdornment,
   OutlinedInput,
-} from "@material-ui/core";
-import InputLabel from "@material-ui/core/InputLabel";
-import MenuItem from "@material-ui/core/MenuItem";
-import SaveIcon from "@material-ui/icons/Save";
-import Button from "@material-ui/core/Button";
-import FormControl from "@material-ui/core/FormControl";
-import Select from "@material-ui/core/Select";
-import TextField from "@material-ui/core/TextField";
+} from "@mui/material";
+import InputLabel from "@mui/material/InputLabel";
+import MenuItem from "@mui/material/MenuItem";
+import SaveIcon from '@mui/icons-material/Save';
+import Button from "@mui/material/Button";
+import FormControl from "@mui/material/FormControl";
+import Select from "@mui/material/Select";
+import TextField from "@mui/material/TextField";
 
 import { gridSpacing } from "../../../utils/constant";
 import SubCard from "../../../components/_dashboard/cards/SubCard";
@@ -25,20 +25,20 @@ function CardCreate() {
   const [cardsList, setCardsList] = useState([]);
   const [isEditingId, setIsEditingId] = useState("");
   const [formInput, setFormInput] = useState({});
-  const [selectedTrade, setSelectedTrade] = useState();
+  const [selectedTrades, setSelectedTrades] = useState([]);
 
   const editId = useLocation().pathname?.split("/")[4];
 
   useEffect(() => {
-    if (editId) {
-      setIsEditingId(editId);
-      (async () => {
-        const resp = await axiosInstance.get(`/cards/${editId}`);
-        setFormInput(resp.data?.length ? resp.data[0] : {});
-        setSelectedTrade(resp.data?.length && resp.data[0].tradeId);
-      })();
-    }
-  }, [editId]);
+  if (editId) {
+    setIsEditingId(editId);
+    (async () => {
+      const resp = await axiosInstance.get(`/cards/${editId}`);
+      setFormInput(resp.data?.length ? resp.data[0] : {});
+      setSelectedTrades(resp.data?.length ? resp.data[0].tradeId : null);
+    })();
+  }
+}, [editId]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -49,41 +49,41 @@ function CardCreate() {
   };
 
   const handleAddNewCard = async () => {
-    if (selectedTrade && Object.entries(formInput).length > 4) {
-      formInput.tradeId = selectedTrade._id;
-      const resp = await axiosInstance.post("/cards", formInput);
-      if (resp.data.err) {
-        alert(resp.data.err);
-      } else {
-        setCardsList([...cardsList, resp.data]);
-        setFormInput({});
-        setSelectedTrade();
-        alert("Card created successfully");
-      }
+  if (selectedTrades.length > 0 && Object.entries(formInput).length > 4) {
+    formInput.tradeId = selectedTrades.map(trade => trade._id);
+    const resp = await axiosInstance.post("/cards", formInput);
+    if (resp.data.err) {
+      alert(resp.data.err);
     } else {
-      alert("Enter all fields");
+      setCardsList([...cardsList, resp.data]);
+      setFormInput({});
+      setSelectedTrades([]);
+      alert("Card created successfully");
     }
-  };
+  } else {
+    alert("Enter all fields and select at least one trade");
+  }
+};
 
   const handleEditCard = async () => {
-    if (selectedTrade && Object.entries(formInput).length > 4) {
-      formInput.tradeId = selectedTrade._id;
-      const resp = await axiosInstance.put(`/cards/${editId}`, formInput);
-      if (resp.data.err) {
-        alert(resp.data.err);
-      } else {
-        const _cardsList = cardsList.filter(
-          (card) => card._id !== formInput?._id
-        );
-        setCardsList([..._cardsList, formInput]);
-        setFormInput({});
-        setSelectedTrade();
-        alert("Card edited successfully");
-      }
+  if (selectedTrades.length > 0 && Object.entries(formInput).length > 4) {
+    formInput.tradeId = selectedTrades.map(trade => trade._id);
+    const resp = await axiosInstance.put(`/cards/${editId}`, formInput);
+    if (resp.data.err) {
+      alert(resp.data.err);
     } else {
-      alert("Enter all fields");
+      const _cardsList = cardsList.filter(
+        (card) => card._id !== formInput?._id
+      );
+      setCardsList([..._cardsList, formInput]);
+      setFormInput({});
+      setSelectedTrades([]);
+      alert("Card edited successfully");
     }
-  };
+  } else {
+    alert("Enter all fields and select at least one trade");
+  }
+};
 
   return (
     <Grid container spacing={gridSpacing}>
@@ -95,14 +95,26 @@ function CardCreate() {
                 <Grid container direction="column" spacing={1}>
                   <Grid item>
                     <TradeContext.Provider
-                      value={{ selectedTrade, setSelectedTrade }}
+                      value={{ selectedTrades, setSelectedTrades }}
                     >
                       <TradeSelectCard
-                        {...selectedTrade}
+                        {...selectedTrades}
                         tradeContext={TradeContext}
                       />
                     </TradeContext.Provider>
                   </Grid>
+                  <Grid item>
+  <TextField
+    id="outlined-basic"
+    label="Selected Trades"
+    variant="outlined"
+    fullWidth
+    value={selectedTrades.map(trade => trade.title).join(', ')}
+    InputProps={{
+      readOnly: true,
+    }}
+  />
+</Grid>
                   <Grid item>
                     <TextField
                       id="outlined-basic"

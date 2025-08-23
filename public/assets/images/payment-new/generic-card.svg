@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="48px" height="32px" viewBox="0 0 48 32" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Generic Payment Card</title>
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#F0F0F0" x="0" y="0" width="48" height="32" rx="4"></rect>
+        <rect stroke="#CCCCCC" stroke-width="1" x="0.5" y="0.5" width="47" height="31" rx="4"></rect>
+        <rect fill="#CCCCCC" x="4" y="8" width="40" height="4" rx="1"></rect>
+        <rect fill="#DDDDDD" x="4" y="20" width="16" height="4" rx="1"></rect>
+        <rect fill="#DDDDDD" x="24" y="20" width="8" height="4" rx="1"></rect>
+        <rect fill="#DDDDDD" x="36" y="20" width="8" height="4" rx="1"></rect>
+    </g>
+</svg>

@@ -1,9 +1,10 @@
 import { Icon } from "@iconify/react";
 import { useRef, useState } from "react";
 import homeFill from "@iconify/icons-eva/home-fill";
+import personFill from "@iconify/icons-eva/person-fill";
 import { Link as RouterLink } from "react-router-dom";
 // material
-import { alpha } from "@material-ui/core/styles";
+import { alpha } from "@mui/material/styles";
 import {
   Button,
   Box,
@@ -12,7 +13,7 @@ import {
   Typography,
   Avatar,
   IconButton,
-} from "@material-ui/core";
+} from "@mui/material";
 // components
 import MenuPopover from "../../components/MenuPopover";
 import AuthService from "../../services/auth.service";
@@ -25,6 +26,11 @@ const MENU_OPTIONS = [
     icon: homeFill,
     linkTo: "/",
   },
+  {
+    label: 'My Profile',
+    icon: personFill,
+    linkTo: '/customer/profile'
+  }
 ];
 
 // ----------------------------------------------------------------------

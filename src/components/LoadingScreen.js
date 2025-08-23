@@ -2,15 +2,15 @@ import NProgress from "nprogress";
 import { motion } from "framer-motion";
 import { useEffect, useMemo } from "react";
 // material
-import { makeStyles } from "@material-ui/styles";
-import { alpha, experimentalStyled as styled } from "@material-ui/core/styles";
-import { Box } from "@material-ui/core";
+import { makeStyles } from '@mui/styles';
+import { alpha, styled } from "@mui/material/styles";
+import { Box } from "@mui/material";
 //
 import Logo from "./LogoSquare";
 
 // ----------------------------------------------------------------------
 
-const nprogressStyle = makeStyles((theme) => ({
+const useStyles = makeStyles((theme) => ({
   "@global": {
     "#nprogress": {
       pointerEvents: "none",
@@ -49,7 +49,7 @@ const RootStyle = styled("div")(({ theme }) => ({
 // ----------------------------------------------------------------------
 
 export default function LoadingScreen({ ...other }) {
-  nprogressStyle();
+  useStyles(); // This will apply the global styles without needing to use the classes object
 
   useMemo(() => {
     NProgress.start();

@@ -1,5 +1,5 @@
 // material
-import { Box, Container, Typography, Grid } from "@material-ui/core";
+import { Box, Container, Typography, Grid } from "@mui/material";
 
 export default function AboutVision() {
   return (

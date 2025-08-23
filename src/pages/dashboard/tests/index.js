@@ -8,7 +8,7 @@ import {
   Button,
   Typography,
   useTheme,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import Searchbar from "../../../layouts/dashboard/Searchbar";
 import SubCard from "../../../components/_dashboard/cards/SubCard";

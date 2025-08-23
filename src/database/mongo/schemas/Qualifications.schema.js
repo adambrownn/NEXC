@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const modelRegistry = require("../modelRegistry");
 
 const qualificationSchema = mongoose.Schema({
   title: {
@@ -26,5 +27,8 @@ const qualificationSchema = mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-const Qualification = mongoose.model("qualifications", qualificationSchema);
-module.exports = Qualification;
+// Register schema with the registry instead of creating model directly
+modelRegistry.registerSchema("qualifications", qualificationSchema);
+
+// Export the schema for reference
+module.exports = qualificationSchema;

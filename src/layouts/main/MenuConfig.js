@@ -1,10 +1,9 @@
 import { Icon } from "@iconify/react";
-import homeFill from "@iconify/icons-eva/home-fill";
 import fileFill from "@iconify/icons-eva/file-fill";
 import roundGrain from "@iconify/icons-ic/round-grain";
 import bookOpenFill from "@iconify/icons-eva/book-open-fill";
 // routes
-import { PATH_PAGE, PATH_DASHBOARD, CATEGORY_PATH } from "../../routes/paths";
+import { PATH_PAGE, CATEGORY_PATH } from "../../routes/paths";
 
 // ----------------------------------------------------------------------
 
@@ -13,12 +12,8 @@ const ICON_SIZE = {
   height: 22,
 };
 
-const menuConfig = [
-  {
-    title: "Home",
-    icon: <Icon icon={homeFill} {...ICON_SIZE} />,
-    path: "/",
-  },
+const navConfig = [
+  { title: "Home", path: "/" },
   {
     title: "Trades",
     icon: <Icon icon={roundGrain} {...ICON_SIZE} />,
@@ -35,6 +30,7 @@ const menuConfig = [
           { title: "CSCS Cards", path: CATEGORY_PATH.cards.cscs },
           { title: "Skill Cards", path: CATEGORY_PATH.cards.skill },
           { title: "CISRS Cards", path: CATEGORY_PATH.cards.cisrs },
+          { title: "CPCS Cards", path: CATEGORY_PATH.cards.cpcs },
         ],
       },
       {
@@ -52,27 +48,14 @@ const menuConfig = [
       {
         subheader: "Courses",
         items: [
-          { title: "Operative", path: CATEGORY_PATH.courses.operative },
-          { title: "Supervision", path: CATEGORY_PATH.courses.supervision },
+          { title: "CITB", path: CATEGORY_PATH.courses.citb },
+          { title: "Health and Safety", path: CATEGORY_PATH.courses.healthandsafety },
           { title: "Scaffolding", path: CATEGORY_PATH.courses.scaffolding },
           {
-            title: "Managerial and Directoral",
-            path: CATEGORY_PATH.courses.managerial,
+            title: "Plant Operations",
+            path: CATEGORY_PATH.courses.plantoperations,
           },
         ],
-      },
-      // {
-      //   subheader: "Additionals",
-      //   items: [
-      //     { title: "About Us", path: PATH_PAGE.about },
-      //     { title: "Contact Us", path: PATH_PAGE.contact },
-      //     { title: "Need support", path: PATH_PAGE.faqs },
-      //     { title: "FAQs", path: PATH_PAGE.faqs },
-      //   ],
-      // },
-      {
-        subheader: "Group Booking",
-        items: [{ title: "Group Booking", path: PATH_DASHBOARD.root }],
       },
     ],
   },
@@ -81,6 +64,7 @@ const menuConfig = [
     icon: <Icon icon={bookOpenFill} {...ICON_SIZE} />,
     path: PATH_PAGE.qualifications,
   },
+  { title: "Group Booking", path: "#" }, // Use # to prevent navigation
 ];
 
-export default menuConfig;
+export default navConfig;

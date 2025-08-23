@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
-import AddShoppingCartIcon from "@material-ui/icons/AddShoppingCart";
-import Fab from "@material-ui/core/Fab";
-import Tooltip from "@material-ui/core/Tooltip";
-import { Badge, Button, Dialog, DialogActions } from "@material-ui/core";
-import CartBucketService from "../services/bucket";
-import EcommerceCheckout from "../pages/EcommerceCheckout";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import Fab from "@mui/material/Fab";
+import Tooltip from "@mui/material/Tooltip";
+import { Badge, Button, Dialog, DialogActions, DialogTitle, DialogContent, IconButton } from "@mui/material";
+import { useCart } from '../contexts/CartContext';
+import { CheckoutPurchaseList } from './checkout';
 
-import { makeStyles } from "@material-ui/styles";
+import { makeStyles } from '@mui/styles';
 
 const useStyles = makeStyles((theme) => ({
   absolute: {
@@ -21,36 +20,52 @@ const useStyles = makeStyles((theme) => ({
 export default function CartCount(props) {
   const classes = useStyles();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isCheckoutPage = location.pathname === '/checkout';
 
-  const [bucketOpen, setBucketOpen] = useState(false);
-  const [itemsCount, setItemsCount] = useState(0);
+  const [open, setOpen] = useState(false);
 
-  let search = window.location.search;
-  let params = new URLSearchParams(search);
-  let cartItemsCount = params.get("cartitems");
+  // Use cart context for consistent state management
+  const { items, loadCartItems } = useCart();
 
+  // Get cart count from context
+  const cartItemCount = items?.length || 0;
+
+  // Load cart items when component mounts or when items might have changed
   useEffect(() => {
-    (async () => {
-      const count = await CartBucketService.getItemsCount();
-      setItemsCount(count || 0);
-    })();
-  }, [cartItemsCount]);
+    loadCartItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Update both click handlers to use the same navigation pattern
   const handleBucketOpen = () => {
-    setBucketOpen(true);
+    navigate('/checkout');
   };
 
-  const handleBucketClose = () => {
-    setBucketOpen(false);
+  const handleOpen = () => {
+    setOpen(true);
+  };
 
-    navigate(`/trades?cartitems=${0}`);
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleProceedToCheckout = () => {
+    // Close dialog first
+    setOpen(false);
+
+    // Small delay to ensure dialog closes before navigation
+    setTimeout(() => {
+      navigate('/checkout');
+    }, 50);
   };
 
   return (
     <>
-      {itemsCount > 0 ? (
-        props.position === "global" ? (
-          <Tooltip title="Checkout" aria-label="add">
+      {/* Only show CHECKOUT NOW button when not on checkout page */}
+      {props.position === "global" && !isCheckoutPage && cartItemCount > 0 && (
+        <Tooltip title="Checkout" aria-label="add">
+          <span> {/* Wrapper for tooltip */}
             <Fab
               color="primary"
               className={classes.absolute}
@@ -58,43 +73,56 @@ export default function CartCount(props) {
               onClick={handleBucketOpen}
             >
               CHECKOUT NOW
-              <Badge badgeContent={itemsCount} color="secondary">
+              <Badge badgeContent={cartItemCount} color="secondary">
                 <ShoppingCartIcon
                   style={{ marginInline: 10, transform: "scale(1.2)" }}
                 />
               </Badge>
             </Fab>
-          </Tooltip>
-        ) : (
-          <Button
-            sx={{
-              marginLeft: 4,
-              transform: "scale(1.3)",
-            }}
-            onClick={handleBucketOpen}
-          >
-            <Badge badgeContent={itemsCount} color="secondary">
-              <ShoppingCartIcon
-                style={{ marginInline: 10, transform: "scale(1.2)" }}
-              />
-            </Badge>
-          </Button>
-        )
-      ) : (
-        props.position !== "global" && (
-          <Button
-            sx={{
-              marginLeft: 4,
-              transform: "scale(1.3)",
-            }}
-            onClick={handleBucketOpen}
-          >
-            <AddShoppingCartIcon />
-          </Button>
-        )
+          </span>
+        </Tooltip>
+      )}
+
+      {props.position !== "global" && (
+        <IconButton
+          color="primary"
+          onClick={handleOpen}
+          aria-label="Shopping cart"
+          sx={{ color: 'primary.main' }}
+        >
+          <Badge badgeContent={cartItemCount} color="error">
+            <ShoppingCartIcon />
+          </Badge>
+        </IconButton>
       )}
 
       <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>Your Cart</DialogTitle>
+        <DialogContent>
+          <CheckoutPurchaseList onNavigate={handleProceedToCheckout} />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleClose} color="inherit">
+            Continue Shopping
+          </Button>
+          {cartItemCount > 0 && (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleProceedToCheckout}
+            >
+              Proceed to Checkout
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* <Dialog
         open={bucketOpen}
         onClose={handleBucketClose}
         scroll={"paper"}
@@ -105,7 +133,7 @@ export default function CartCount(props) {
         <DialogActions>
           <Button onClick={handleBucketClose}>Close</Button>
         </DialogActions>
-      </Dialog>
+      </Dialog> */}
     </>
   );
 }

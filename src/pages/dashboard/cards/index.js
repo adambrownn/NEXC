@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { Card, CardHeader, Divider, Grid, Typography } from "@material-ui/core";
-import MuiTypography from "@material-ui/core/Typography";
-import DeleteIcon from "@material-ui/icons/Delete";
-import Button from "@material-ui/core/Button";
+import { Card, CardHeader, Divider, Grid, Typography } from "@mui/material";
+import MuiTypography from "@mui/material/Typography";
+import DeleteIcon from '@mui/icons-material/Delete';
+import Button from "@mui/material/Button";
 
 import { gridSpacing } from "../../../utils/constant";
 import SubCard from "../../../components/_dashboard/cards/SubCard";

@@ -7,7 +7,7 @@ import {
   AccordionSummary,
   AccordionDetails,
   CircularProgress,
-} from "@material-ui/core";
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import axiosInstance from "../../../axiosConfig";
 

@@ -7,27 +7,33 @@ import eyeOffFill from "@iconify/icons-eva/eye-off-fill";
 // material
 import {
   Stack,
-  TextField,
   IconButton,
   InputAdornment,
   Alert,
-} from "@material-ui/core";
-import { LoadingButton } from "@material-ui/lab";
+} from "@mui/material";
+
 import AuthService from "../../../services/auth.service";
-// hooks
+// custom styling
+import { StyledTextField, AuthButton } from "../AuthStyler";
 
 export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   const RegisterSchema = Yup.object().shape({
     name: Yup.string()
-      .min(2, "Too Short!")
-      .max(50, "Too Long!")
-      .required("First name required"),
+      .min(2, "Name is too short")
+      .max(50, "Name is too long")
+      .required("Name is required"),
     email: Yup.string()
-      .email("Email must be a valid email address")
+      .email("Please enter a valid email address")
       .required("Email is required"),
-    password: Yup.string().required("Password is required"),
+    password: Yup.string()
+      .required("Password is required")
+      .min(8, "Password should be at least 8 characters")
+      .matches(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+      ),
   });
 
   const formik = useFormik({
@@ -66,42 +72,73 @@ export default function RegisterForm() {
       <Form autoComplete="off" noValidate onSubmit={handleSubmit}>
         <Stack spacing={3}>
           {errors.afterSubmit && (
-            <Alert severity="error">{errors.afterSubmit}</Alert>
+            <Alert
+              severity="error"
+              sx={{
+                animation: 'fadeIn 0.5s',
+                '@keyframes fadeIn': {
+                  from: { opacity: 0, transform: 'translateY(-10px)' },
+                  to: { opacity: 1, transform: 'translateY(0)' }
+                }
+              }}
+            >
+              {errors.afterSubmit}
+            </Alert>
           )}
 
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              fullWidth
-              label="Full name"
-              type="text"
-              {...getFieldProps("name")}
-              error={Boolean(touched.name && errors.name)}
-              helperText={touched.name && errors.name}
-            />
-          </Stack>
+          <StyledTextField
+            fullWidth
+            label="Full name"
+            type="text"
+            placeholder="John Doe"
+            {...getFieldProps("name")}
+            error={Boolean(touched.name && errors.name)}
+            helperText={touched.name && errors.name}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Icon icon="eva:person-outline" width={20} height={20} />
+                </InputAdornment>
+              ),
+            }}
+          />
 
-          <TextField
+          <StyledTextField
             fullWidth
             autoComplete="username"
             type="email"
             label="Email address"
+            placeholder="example@nexc.co.uk"
             {...getFieldProps("email")}
             error={Boolean(touched.email && errors.email)}
             helperText={touched.email && errors.email}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Icon icon="eva:email-outline" width={20} height={20} />
+                </InputAdornment>
+              ),
+            }}
           />
 
-          <TextField
+          <StyledTextField
             fullWidth
             autoComplete="current-password"
             type={showPassword ? "text" : "password"}
             label="Password"
             {...getFieldProps("password")}
             InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Icon icon="eva:lock-outline" width={20} height={20} />
+                </InputAdornment>
+              ),
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
                     edge="end"
                     onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     <Icon icon={showPassword ? eyeFill : eyeOffFill} />
                   </IconButton>
@@ -112,7 +149,7 @@ export default function RegisterForm() {
             helperText={touched.password && errors.password}
           />
 
-          <LoadingButton
+          <AuthButton
             fullWidth
             size="large"
             type="submit"
@@ -120,7 +157,7 @@ export default function RegisterForm() {
             loading={isSubmitting}
           >
             Register
-          </LoadingButton>
+          </AuthButton>
         </Stack>
       </Form>
     </FormikProvider>

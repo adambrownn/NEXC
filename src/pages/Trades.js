@@ -1,20 +1,21 @@
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
+import { experimentalStyled as styled } from "@mui/material/styles";
 import {
   Container,
   Divider,
   Grid,
   LinearProgress,
   Typography,
-} from "@material-ui/core";
+  Box
+} from "@mui/material";
 // components
-import Page from "../components/Page";
+import Page from "src/components/Page";
 import {
   ComponentCards,
   ComponentCourses,
   ComponentHero,
   ComponentTests,
-} from "../components/_external-pages/trades";
+} from "src/components/_external-pages/trades";
 import { createContext, useEffect, useState } from "react";
 import axiosInstance from "src/axiosConfig";
 
@@ -30,94 +31,171 @@ const RootStyle = styled(Page)(({ theme }) => ({
 
 export default function TradesOverview(props) {
   const [loading, setLoading] = useState({
-    cards: false,
-    courses: false,
-    tests: false,
+    cards: true,
+    courses: true,
+    tests: true,
   });
   const [cards, setCards] = useState([]);
   const [courses, setCourses] = useState([]);
   const [tests, setTests] = useState([]);
+  const [error, setError] = useState(null);
 
   const [tradeId, setTradeId] = useState("");
   const [serviceOrder, setServiceOrder] = useState(0);
 
   useEffect(() => {
-    let search = window.location.search;
-    let params = new URLSearchParams(search);
-    let queryTradeId = params.get("tradeid");
+    // Handle URL parameters and hash
+    const handleUrlParams = () => {
+      const search = window.location.search;
+      const params = new URLSearchParams(search);
+      const queryTradeId = params.get("tradeid");
 
-    const hash = window.location.hash;
-    switch (hash) {
-      case "#csl-courses":
-        setServiceOrder(1);
-        break;
+      const hash = window.location.hash;
+      switch (hash) {
+        case "#csl-courses":
+          setServiceOrder(1);
+          break;
+        case "#csl-tests":
+          setServiceOrder(2);
+          break;
+        case "#csl-cards":
+        default:
+          setServiceOrder(0);
+          break;
+      }
 
-      case "#csl-tests":
-        setServiceOrder(2);
+      if (queryTradeId) {
+        setTradeId(queryTradeId);
+      }
+    };
 
-        break;
+    // Call once on mount
+    handleUrlParams();
+  }, []); // Empty dependency array as we only want this to run once on mount
 
-      case "#csl-cards":
-      default:
-        setServiceOrder(0);
-        break;
-    }
-    if (queryTradeId) {
-      setTradeId(queryTradeId);
-    }
+  useEffect(() => {
+    let isMounted = true;
 
-    (async () => {
-      setLoading({ cards: true });
-      // get cards list
-      const cardsResp = await axiosInstance.get(`/cards?tradeId=${tradeId}`);
+    const fetchServices = async () => {
+      try {
+        setError(null);
+        setLoading({ cards: true, courses: true, tests: true });
 
-      var cardsResult = cardsResp.data?.reduce((unique, o) => {
-        if (
-          !unique.some(
-            (obj) => obj.title === o.title && obj.category === o.category
-          )
-        ) {
-          unique.push(o);
+        // Use trade-specific endpoint when a trade is selected
+        const endpoint = tradeId ? `/trades/services/${tradeId}` : '/trades/services';
+        console.log('[fetchServices] Fetching from endpoint:', endpoint, 'for tradeId:', tradeId);
+        
+        const servicesResp = await axiosInstance.get(endpoint);
+        console.log('[fetchServices] Services response:', servicesResp.data);
+        
+        if (!isMounted) return;
+
+        if (!servicesResp.data.success) {
+          throw new Error(servicesResp.data.error || 'Failed to fetch services');
         }
-        return unique;
-      }, []);
-      setCards(cardsResult || []);
-      setLoading({ cards: false });
 
-      // get courses list
-      setLoading({ courses: true });
-      const coursesResp = await axiosInstance.get(
-        `/courses?tradeId=${tradeId}`
-      );
-      var coursesResult = coursesResp.data?.reduce((unique, o) => {
-        if (
-          !unique.some(
-            (obj) => obj.title === o.title && obj.category === o.category
-          )
-        ) {
-          unique.push(o);
+        const { data } = servicesResp.data;
+        if (!data) {
+          throw new Error('No data received from server');
         }
-        return unique;
-      }, []);
-      setCourses(coursesResult || []);
-      setLoading({ courses: false });
 
-      // get tests list
-      setLoading({ tests: true });
-      const testsResp = await axiosInstance.get(`/tests?tradeId=${tradeId}`);
-      var testsResult = testsResp.data?.reduce((unique, o) => {
-        if (
-          !unique.some(
-            (obj) => obj.title === o.title && obj.category === o.category
-          )
-        ) {
-          unique.push(o);
+        // Extract services and associated IDs
+        const {
+          cards = [],
+          courses = [],
+          tests = [],
+          associatedServiceIds = []
+        } = data;
+
+        console.log('[fetchServices] Raw data:', {
+          cards: cards.length,
+          courses: courses.length,
+          tests: tests.length,
+          associatedIds: associatedServiceIds.length,
+          tradeId
+        });
+
+        // Process services with proper error handling
+        const processServices = (services = []) => {
+          if (!Array.isArray(services)) {
+            console.warn('Invalid services data received:', services);
+            return [];
+          }
+
+          const processed = services.reduce((unique, service) => {
+            if (!service || typeof service !== 'object') {
+              console.warn('Invalid service item:', service);
+              return unique;
+            }
+
+            const title = service.title || '';
+            const category = service.category || '';
+            
+            // Check for duplicates based on title and category
+            if (!unique.some(obj => obj.title === title && obj.category === category)) {
+              // Create a new object to avoid mutating the original
+              const processedService = {
+                ...service,
+                title,
+                category,
+                _id: service._id?.toString() || '',
+                // Mark as associated if we have a tradeId and the service is in the associatedServiceIds
+                isAssociated: tradeId ? associatedServiceIds.includes(service._id?.toString()) : false
+              };
+              
+              // Include all services when no trade is selected, or only associated ones when a trade is selected
+              if (!tradeId || processedService.isAssociated) {
+                unique.push(processedService);
+              }
+            }
+            return unique;
+          }, []);
+
+          console.log('[fetchServices] Processed services:', {
+            input: services.length,
+            output: processed.length,
+            associatedCount: processed.filter(s => s.isAssociated).length,
+            tradeId
+          });
+
+          return processed;
+        };
+
+        if (isMounted) {
+          const processedCards = processServices(cards);
+          const processedCourses = processServices(courses);
+          const processedTests = processServices(tests);
+
+          console.log('[fetchServices] Final processed services:', {
+            cards: processedCards.length,
+            courses: processedCourses.length,
+            tests: processedTests.length
+          });
+
+          setCards(processedCards);
+          setCourses(processedCourses);
+          setTests(processedTests);
         }
-        return unique;
-      }, []);
-      setTests(testsResult || []);
-      setLoading({ courses: false });
-    })();
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        if (isMounted) {
+          setError(error.message || 'Failed to fetch services');
+          setCards([]);
+          setCourses([]);
+          setTests([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading({ cards: false, courses: false, tests: false });
+        }
+      }
+    };
+
+    fetchServices();
+
+    return () => {
+      isMounted = false;
+    };
   }, [tradeId]);
 
   return (
@@ -126,7 +204,14 @@ export default function TradesOverview(props) {
         <ComponentHero tradeId={tradeId} tradeContext={TradeContext} />
       </TradeContext.Provider>
       <Container maxWidth="lg">
-        {serviceOrder === 0 && (
+        {error && (
+          <Box sx={{ my: 3, textAlign: 'center' }}>
+            <Typography color="error" variant="body1">
+              {error}
+            </Typography>
+          </Box>
+        )}
+        {serviceOrder === 0 && !error && (
           <>
             <div id="csl-cards">
               {loading.cards ? (
@@ -187,7 +272,7 @@ export default function TradesOverview(props) {
             </div>
           </>
         )}
-        {serviceOrder === 1 && (
+        {serviceOrder === 1 && !error && (
           <>
             <div id="csl-courses">
               {loading.courses ? (
@@ -248,7 +333,7 @@ export default function TradesOverview(props) {
             </div>
           </>
         )}
-        {serviceOrder === 2 && (
+        {serviceOrder === 2 && !error && (
           <>
             <div id="csl-tests">
               {loading.tests ? (

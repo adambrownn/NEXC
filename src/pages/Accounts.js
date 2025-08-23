@@ -1,4 +1,4 @@
-import { Container, Typography } from "@material-ui/core";
+import { Container, Typography } from "@mui/material";
 import TableDataList from "../components/accounts/TableDataList";
 import Page from "../components/Page";
 

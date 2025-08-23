@@ -4,14 +4,14 @@ import {
   alpha,
   useTheme,
   experimentalStyled as styled,
-} from "@material-ui/core/styles";
+} from "@mui/material/styles";
 import {
   Box,
   Grid,
   Container,
   Typography,
   LinearProgress,
-} from "@material-ui/core";
+} from "@mui/material";
 // utils
 import { fPercent } from "../../../utils/formatNumber";
 //
@@ -103,7 +103,7 @@ export default function AboutWhat() {
                     : "common.white",
               }}
             >
-              Construction Safety Line offers services for UK construction
+              NEXC offers services for UK construction
               sector in terms of Cards, Health and Safety Test and trainings. We
               also deliver best qualification experience. With us you will get
               clear understanding and knowledge to go through the whole process

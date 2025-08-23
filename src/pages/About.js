@@ -1,6 +1,6 @@
 // material
-import { experimentalStyled as styled } from "@material-ui/core/styles";
-import { Divider } from "@material-ui/core";
+import { experimentalStyled as styled } from "@mui/material/styles";
+import { Divider } from "@mui/material";
 // components
 import Page from "../components/Page";
 import {

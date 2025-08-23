@@ -1,13 +1,13 @@
 import { useRef, useState } from "react";
 // material
-import { alpha } from "@material-ui/core/styles";
+import { alpha } from "@mui/material/styles";
 import {
   Box,
   MenuItem,
   ListItemIcon,
   ListItemText,
   IconButton,
-} from "@material-ui/core";
+} from "@mui/material";
 // components
 import MenuPopover from "../../components/MenuPopover";
 

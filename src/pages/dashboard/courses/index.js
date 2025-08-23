@@ -8,7 +8,7 @@ import {
   Button,
   Typography,
   useTheme,
-} from "@material-ui/core";
+} from "@mui/material";
 
 import SubCard from "../../../components/_dashboard/cards/SubCard";
 import { gridSpacing } from "../../../utils/constant";

@@ -1,0 +1,114 @@
+/**
+ * Constants related to payment processing
+ */
+
+// Payment status codes
+const PAYMENT_STATUS = {
+    NOT_STARTED: 0,
+    PENDING: 1,
+    PROCESSING: 2,
+    COMPLETED: 3,
+    FAILED: 4,
+    CANCELLED: 5,
+    REFUNDED: 6,
+    PARTIALLY_REFUNDED: 7
+};
+
+// Human-readable labels for payment statuses
+const PAYMENT_STATUS_LABELS = {
+    [PAYMENT_STATUS.NOT_STARTED]: 'Not Started',
+    [PAYMENT_STATUS.PENDING]: 'Pending',
+    [PAYMENT_STATUS.PROCESSING]: 'Processing',
+    [PAYMENT_STATUS.COMPLETED]: 'Completed',
+    [PAYMENT_STATUS.FAILED]: 'Failed',
+    [PAYMENT_STATUS.CANCELLED]: 'Cancelled',
+    [PAYMENT_STATUS.REFUNDED]: 'Refunded',
+    [PAYMENT_STATUS.PARTIALLY_REFUNDED]: 'Partially Refunded'
+};
+
+// Status color mapping for UI elements
+const PAYMENT_STATUS_COLORS = {
+    [PAYMENT_STATUS.NOT_STARTED]: 'default',
+    [PAYMENT_STATUS.PENDING]: 'warning',
+    [PAYMENT_STATUS.PROCESSING]: 'info',
+    [PAYMENT_STATUS.COMPLETED]: 'success',
+    [PAYMENT_STATUS.FAILED]: 'error',
+    [PAYMENT_STATUS.CANCELLED]: 'error',
+    [PAYMENT_STATUS.REFUNDED]: 'info',
+    [PAYMENT_STATUS.PARTIALLY_REFUNDED]: 'warning'
+};
+
+/**
+ * Unified payment method type definitions
+ * This is the single source of truth for all payment method types
+ * used consistently across frontend and backend
+ */
+const PAYMENT_METHOD_TYPES = {
+    CARD: 'card',
+    GOOGLE_PAY: 'google_pay',
+    APPLE_PAY: 'apple_pay',
+    LINK: 'link',
+    REVOLUT_PAY: 'revolut_pay',
+    AFTERPAY_CLEARPAY: 'afterpay_clearpay',
+    KLARNA: 'klarna',
+    PAY_BY_BANK: 'pay_by_bank',
+    BANK_TRANSFER: 'bank_transfer',
+    EPS: 'eps',
+    BANCONTACT: 'bancontact'
+};
+
+/**
+ * Standard order of payment methods
+ * This order is used consistently in both frontend UI and backend Stripe configuration
+ */
+const PAYMENT_METHOD_ORDER = [
+    PAYMENT_METHOD_TYPES.CARD,
+    PAYMENT_METHOD_TYPES.GOOGLE_PAY,
+    PAYMENT_METHOD_TYPES.APPLE_PAY,
+    PAYMENT_METHOD_TYPES.LINK,
+    PAYMENT_METHOD_TYPES.REVOLUT_PAY,
+    PAYMENT_METHOD_TYPES.AFTERPAY_CLEARPAY,
+    PAYMENT_METHOD_TYPES.KLARNA,
+    PAYMENT_METHOD_TYPES.PAY_BY_BANK,
+    PAYMENT_METHOD_TYPES.BANK_TRANSFER,
+    PAYMENT_METHOD_TYPES.EPS,
+    PAYMENT_METHOD_TYPES.BANCONTACT
+];
+
+/**
+ * Payment method categories for UI organization
+ */
+const PAYMENT_METHOD_CATEGORIES = {
+    CARDS: 'cards',
+    DIGITAL_WALLETS: 'digital_wallets',
+    BUY_NOW_PAY_LATER: 'bnpl',
+    BANK_PAYMENTS: 'bank_payments'
+};
+
+/**
+ * Payment method category mapping
+ */
+const PAYMENT_METHOD_CATEGORY_MAP = {
+    [PAYMENT_METHOD_TYPES.CARD]: PAYMENT_METHOD_CATEGORIES.CARDS,
+    [PAYMENT_METHOD_TYPES.GOOGLE_PAY]: PAYMENT_METHOD_CATEGORIES.DIGITAL_WALLETS,
+    [PAYMENT_METHOD_TYPES.APPLE_PAY]: PAYMENT_METHOD_CATEGORIES.DIGITAL_WALLETS,
+    [PAYMENT_METHOD_TYPES.LINK]: PAYMENT_METHOD_CATEGORIES.DIGITAL_WALLETS,
+    [PAYMENT_METHOD_TYPES.REVOLUT_PAY]: PAYMENT_METHOD_CATEGORIES.DIGITAL_WALLETS,
+    [PAYMENT_METHOD_TYPES.AFTERPAY_CLEARPAY]: PAYMENT_METHOD_CATEGORIES.BUY_NOW_PAY_LATER,
+    [PAYMENT_METHOD_TYPES.KLARNA]: PAYMENT_METHOD_CATEGORIES.BUY_NOW_PAY_LATER,
+    [PAYMENT_METHOD_TYPES.PAY_BY_BANK]: PAYMENT_METHOD_CATEGORIES.BANK_PAYMENTS,
+    [PAYMENT_METHOD_TYPES.BANK_TRANSFER]: PAYMENT_METHOD_CATEGORIES.BANK_PAYMENTS,
+    [PAYMENT_METHOD_TYPES.EPS]: PAYMENT_METHOD_CATEGORIES.BANK_PAYMENTS,
+    [PAYMENT_METHOD_TYPES.BANCONTACT]: PAYMENT_METHOD_CATEGORIES.BANK_PAYMENTS
+};
+
+// Export using CommonJS format for backend compatibility
+module.exports = {
+    PAYMENT_STATUS,
+    PAYMENT_STATUS_LABELS,
+    PAYMENT_STATUS_COLORS,
+    PAYMENT_METHOD_TYPES,
+    PAYMENT_METHOD_ORDER,
+    PAYMENT_METHOD_CATEGORIES,
+    PAYMENT_METHOD_CATEGORY_MAP
+};

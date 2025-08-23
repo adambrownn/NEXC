@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Grid, Button, TextField } from "@material-ui/core";
+import { Grid, Button, TextField } from "@mui/material";
 
-import { Save as SaveIcon } from "@material-ui/icons";
+import SaveIcon from '@mui/icons-material/Save';
 
 import SubCard from "../../../components/_dashboard/cards/SubCard";
 import { gridSpacing } from "../../../utils/constant";

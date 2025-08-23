@@ -1,25 +1,61 @@
-// material
-import { Stack, Button, Divider, Typography } from "@material-ui/core";
+import { Stack, Button, Divider, Typography } from "@mui/material";
+import { experimentalStyled as styled } from "@mui/material/styles";
 import { Icon } from "@iconify/react";
 import googleFill from "@iconify/icons-eva/google-fill";
-import GoogleLogin from "react-google-login";
-
 import axiosInstance from "../../axiosConfig";
+import { GoogleLogin } from '@react-oauth/google';
+
+// Enhanced Google Button
+const GoogleButton = styled(Button)(({ theme }) => ({
+  color: theme.palette.grey[800],
+  backgroundColor: theme.palette.common.white,
+  borderColor: theme.palette.grey[300],
+  boxShadow: '0 2px 6px 0 rgba(0,0,0,0.05)',
+  '&:hover': {
+    backgroundColor: theme.palette.grey[100],
+    boxShadow: '0 4px 12px 0 rgba(0,0,0,0.08)',
+    transform: 'translateY(-2px)',
+  },
+  transition: theme.transitions.create([
+    'background-color',
+    'box-shadow',
+    'transform'
+  ], {
+    duration: 0.2,
+  }),
+}));
+
+// Enhanced Divider
+const StyledDivider = styled(Divider)(({ theme }) => ({
+  borderColor: theme.palette.divider,
+  width: '100%',
+  '&.MuiDivider-root': {
+    '&::before, &::after': {
+      borderTop: `1px solid ${theme.palette.divider}`,
+    },
+  },
+  '& .MuiDivider-wrapper': {
+    padding: theme.spacing(0, 2),
+  }
+}));
 
 export default function AuthGoogleSocials() {
-  const responseGoogle = async (googleRes) => {
-    if (googleRes && googleRes?.profileObj) {
+  const handleGoogleLogin = async (credentialResponse) => {
+    if (credentialResponse && credentialResponse.credential) {
       let loginType = "google";
-      let email = googleRes.profileObj.email;
-      let socialIdentityToken = googleRes.tokenObj.id_token;
-      let googleAccessToken = googleRes.accessToken;
+      let socialIdentityToken = credentialResponse.credential;
 
-      await axiosInstance.post("/auth/login", {
-        loginType,
-        email,
-        socialIdentityToken,
-        googleAccessToken,
-      });
+      try {
+        await axiosInstance.post("/auth/login", {
+          loginType,
+          socialIdentityToken,
+        });
+        // Handle successful login (e.g., redirect to dashboard)
+        window.location.replace(`/dashboard`);
+      } catch (error) {
+        console.error("Google login error:", error);
+        // Show error message to user
+      }
     }
   };
 
@@ -27,53 +63,38 @@ export default function AuthGoogleSocials() {
     <>
       <Stack direction="row" spacing={2}>
         <GoogleLogin
-          clientId="GOOGLE_CLIENT_ID"
-          render={(renderProps) => (
-            <Button
-              disableElevation
-              fullWidth={true}
-              onClick={renderProps.onClick}
-              style={{
-                fontSize: "1rem",
-                fontWeight: 500,
-                border: "1px solid",
-                textTransform: "none",
-              }}
-              // disabled={renderProps.disabled}
-              disabled
+          onSuccess={handleGoogleLogin}
+          onError={() => {
+            console.log('Login Failed');
+          }}
+          render={({ onClick }) => (
+            <GoogleButton
+              fullWidth
               size="large"
-              variant="contained"
+              color="inherit"
+              variant="outlined"
+              onClick={onClick}
+              startIcon={
+                <Icon icon={googleFill} color="#DF3E30" height={24} />
+              }
             >
-              <Icon
-                icon={googleFill}
-                color="#DF3E30"
-                height={24}
-                width={20}
-                style={{
-                  marginInline: 16,
-                }}
-              />
-              {/* <img
-                src={Google}
-                alt="google"
-                width="20px"
-                className={classes.loginIcon}
-              />{" "} */}
               Continue with Google
-            </Button>
+            </GoogleButton>
           )}
-          buttonText="Login"
-          onSuccess={responseGoogle}
-          onFailure={responseGoogle}
-          cookiePolicy={"single_host_origin"}
         />
       </Stack>
 
-      <Divider sx={{ my: 3 }}>
-        <Typography variant="body2" sx={{ color: "text.secondary" }}>
+      <StyledDivider sx={{ my: 3 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            fontWeight: 500,
+          }}
+        >
           OR
         </Typography>
-      </Divider>
+      </StyledDivider>
     </>
   );
 }

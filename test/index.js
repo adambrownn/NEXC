@@ -1,8 +1,8 @@
 /*
  * File: /test/index.js
- * Project: CSL
- * File Created: Saturday, 25th Aug 2020 3:09:32 pm
- * Author: Kartik Tyagi (kartik9756@gmail.com)
+ * Project: NEXC
+ * File Created: Saturday, 18th Jan 2025 2:54:32 pm
+ * Author: Ashutosh Rajput (ashutosh@nexc.co.uk)
 
- * Copyright 2020 - 2021 KT&T Technologies
+ * Copyright 2020 - 2025 NEXC
  */

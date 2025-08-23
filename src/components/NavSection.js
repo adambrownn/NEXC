@@ -14,7 +14,7 @@ import {
   alpha,
   useTheme,
   experimentalStyled as styled,
-} from "@material-ui/core/styles";
+} from "@mui/material/styles";
 import {
   Box,
   List,
@@ -23,7 +23,7 @@ import {
   ListItemText,
   ListItemIcon,
   ListSubheader,
-} from "@material-ui/core";
+} from "@mui/material";
 
 // ----------------------------------------------------------------------
 

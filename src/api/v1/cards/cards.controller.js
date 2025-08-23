@@ -2,7 +2,7 @@ const express = require("express");
 const {
   extractTokenDetails,
 } = require("../../../common/services/auth.service");
-const router = express();
+const router = express.Router();
 
 const cardsService = require("./cards.service");
 

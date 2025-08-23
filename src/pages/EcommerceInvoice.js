@@ -1,4 +1,4 @@
-import { experimentalStyled as styled } from "@material-ui/core/styles";
+import { experimentalStyled as styled } from "@mui/material/styles";
 import {
   Box,
   Grid,
@@ -13,7 +13,7 @@ import {
   Typography,
   TableContainer,
   CircularProgress,
-} from "@material-ui/core";
+} from "@mui/material";
 // components
 import Page from "../components/Page";
 import Scrollbar from "../components/Scrollbar";
@@ -302,8 +302,7 @@ export default function EcommerceInvoice(props) {
                           Company Number: 13546291
                         </Typography>
                         <Typography variant="caption">
-                          71 - 75, Shelton Street, <br /> Covent Garden London
-                          WC2H 9JQ UNITED KINGDOM
+                          Barampur, UP, 246731
                         </Typography>
                       </Typography>
                     </Grid>
@@ -317,7 +316,7 @@ export default function EcommerceInvoice(props) {
                         Have a Question?
                       </Typography>
                       <Typography variant="body2">
-                        support@constructionsafetyline.co.uk
+                        support@nexc.co.uk
                       </Typography>
                     </Grid>
                   </Grid>

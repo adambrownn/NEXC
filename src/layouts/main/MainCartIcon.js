@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import CartCount from "../../components/CartCount";
 
-export default function MainCartIcon(props) {
-  return <div></div>;
+export default function MainCartIcon() {
+  // Return the cart icon component with proper position
+  return <CartCount position="navbar" />;
 }

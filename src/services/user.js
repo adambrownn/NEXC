@@ -1,21 +1,33 @@
 class UserService {
-  async createUser(user) {
+  createUser(user) {
     localStorage.setItem("billinguser", JSON.stringify(user));
     return true;
   }
 
-  async getBillingUser() {
-    return JSON.parse(localStorage.getItem("billinguser"));
+  getBillingUser() {
+    try {
+      return JSON.parse(localStorage.getItem("billinguser"));
+    } catch (error) {
+      console.error("Error parsing billing user data:", error);
+      return null;
+    }
   }
 
   // token to track order status
-  async createBucketToken(tokenPayload) {
+  createBucketToken(tokenPayload) {
     localStorage.setItem("buckettoken", JSON.stringify(tokenPayload));
     return true;
   }
-  async getBucketToken() {
-    return JSON.parse(localStorage.getItem("buckettoken"));
+
+  getBucketToken() {
+    try {
+      return JSON.parse(localStorage.getItem("buckettoken"));
+    } catch (error) {
+      console.error("Error parsing bucket token:", error);
+      return null;
+    }
   }
 }
 
-export default new UserService();
+const userService = new UserService();
+export default userService;

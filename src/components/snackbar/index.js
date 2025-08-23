@@ -7,10 +7,10 @@ import {
   Grow,
   IconButton,
   Slide,
-} from "@material-ui/core";
-import MuiSnackbar from "@material-ui/core/Snackbar";
+} from "@mui/material";
+import MuiSnackbar from "@mui/material/Snackbar";
 
-import CloseIcon from "@material-ui/icons/Close";
+import CloseIcon from "@mui/icons-material/Close";
 
 function TransitionSlideLeft(props) {
   return <Slide {...props} direction="left" />;

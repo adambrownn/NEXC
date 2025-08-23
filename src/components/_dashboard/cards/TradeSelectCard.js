@@ -1,33 +1,42 @@
 import { useContext, useEffect, useState } from "react";
-import { Autocomplete, TextField, Typography } from "@material-ui/core";
+import { Autocomplete, TextField, Typography } from "@mui/material";
 
 import axiosInstance from "../../../axiosConfig";
 
 function TradeSelectCard(props) {
   const [trades, setTrades] = useState([]);
-  const { selectedTrade, setSelectedTrade } = useContext(props.tradeContext);
+  const { selectedTrade = null, setSelectedTrade } = useContext(props.tradeContext);
 
   useEffect(() => {
-    getTrades();
-  }, [props]);
+  console.log('selectedTrade changed:', selectedTrade);
+}, [selectedTrade]);
+
+useEffect(() => {
+  getTrades();
+}, []);
 
   const getTrades = async () => {
+  try {
     const resp = await axiosInstance.get("/trades");
     setTrades(resp.data || []);
-  };
+  } catch (error) {
+    console.error("Error fetching trades:", error);
+  }
+};
   return (
     <div>
       <Autocomplete
-        id="combo-box-demo"
-        fullWidth
-        options={trades}
-        value={selectedTrade}
-        getOptionLabel={(trade) => trade.title}
-        onChange={(e, value) => setSelectedTrade(value)}
-        renderInput={(params) => (
-          <TextField {...params} label="Select a Trade" variant="outlined" />
-        )}
-      />
+  id="combo-box-demo"
+  fullWidth
+  options={trades}
+  value={selectedTrade}
+  getOptionLabel={(trade) => (trade ? trade.title : '')}
+  onChange={(e, value) => setSelectedTrade(value)}
+  renderInput={(params) => (
+    <TextField {...params} label="Select a Trade" variant="outlined" />
+  )}
+  isOptionEqualToValue={(option, value) => option && value && option.id === value.id}
+/>
       {selectedTrade && (
         <Typography variant="h6" ml={1} color="gray">
           {" "}
