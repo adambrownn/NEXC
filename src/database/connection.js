@@ -16,12 +16,12 @@ mongoose.set('strictQuery', true);
 
 // Connection options optimized for MongoDB Atlas
 const mongooseOptions = {
-  serverSelectionTimeoutMS: 30000,    // Reduced from 60000
-  heartbeatFrequencyMS: 2000,         // Keep this the same
+  serverSelectionTimeoutMS: 15000,    // Reduced from 60000
+  heartbeatFrequencyMS: 10000,         // Increased
   connectTimeoutMS: 30000,            // Reduced from 60000
   socketTimeoutMS: 30000,             // Reduced from 45000
-  maxPoolSize: 50,                    // Maximum pool size
-  minPoolSize: 10,                    // Minimum pool size
+  maxPoolSize: process.env.NODE_ENV === 'production' ? 50 : 10,                    // Maximum pool size
+  minPoolSize: process.env.NODE_ENV === 'production' ? 10 : 2,                    // Minimum pool size
   retryWrites: true,                  // Enable retry writes
   retryReads: true,                   // Enable retry reads
   family: 4,                          // Force IPv4

@@ -11,8 +11,10 @@
     "eject": "react-scripts eject",
     "beautify": "prettier --write \"src/**/*.js\"",
     "start:dev": "PORT=3000 react-scripts start",
+    "start:dev:optimized": "NODE_OPTIONS='--max-old-space-size=4096 --expose-gc' GENERATE_SOURCEMAP=false DISABLE_ESLINT_PLUGIN=true PORT=3000 react-scripts start",
     "start:prod": "npm run build && npm start",
-    "proxy": "https://localhost:8080"
+    "proxy": "https://localhost:8080",
+    "dev:optimize": "bash scripts/dev-optimize.sh"
   },
   "eslintConfig": {
     "extends": [
@@ -38,11 +40,14 @@
     ]
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.957.0",
+    "@aws-sdk/s3-request-presigner": "^3.957.0",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@iconify/icons-ant-design": "^1.2.7",
     "@iconify/icons-eva": "^1.2.6",
     "@iconify/icons-ic": "^1.2.13",
+    "@iconify/icons-mdi": "^1.2.48",
     "@iconify/react": "^4.1.1",
     "@mapbox/mapbox-gl-geocoder": "^5.0.3",
     "@mui/icons-material": "^5.14.19",
@@ -61,8 +66,9 @@
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
     "@turf/bbox": "^6.5.0",
+    "@twilio/voice-sdk": "^2.14.0",
     "apexcharts": "^4.0.0",
-    "aws-sdk": "^2.1692.0",
+    "aws-sdk": "^2.1693.0",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "card-validator": "^8.1.1",
@@ -73,23 +79,23 @@
     "d3-scale": "^4.0.2",
     "date-fns": "^2.30.0",
     "deck.gl": "^8.9.32",
-    "dotenv": "^16.4.7",
     "events": "^3.3.0",
     "express": "^4.21.2",
     "express-fileupload": "^1.5.1",
     "faker": "^5.5.3",
     "file-type": "^16.5.4",
     "formik": "^2.4.6",
-    "framer-motion": "^10.16.14",
+    "framer-motion": "^10.18.0",
     "google-auth-library": "^9.15.0",
     "history": "^5.3.0",
     "immutable": "^4.3.4",
+    "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
-    "jssip": "^3.10.1",
     "lodash": "^4.17.21",
     "mailgun-js": "^0.22.0",
     "mapbox-gl": "^3.9.3",
     "mongoose": "^8.9.5",
+    "multer": "^2.0.2",
     "notistack": "^3.0.2",
     "nprogress": "^0.2.0",
     "numeral": "^2.0.6",
@@ -99,6 +105,7 @@
     "react": "^18.2.0",
     "react-apexcharts": "^1.4.1",
     "react-dom": "^18.2.0",
+    "react-dropzone": "^14.3.8",
     "react-helmet-async": "^2.0.3",
     "react-intersection-observer": "^9.5.3",
     "react-map-gl": "^7.1.6",
@@ -108,9 +115,10 @@
     "react-scripts": "^5.0.1",
     "react-scroll": "^1.9.0",
     "react-slick": "^0.29.0",
+    "resend": "^6.4.1",
+    "sharp": "^0.34.5",
     "simplebar": "^6.3.0",
     "simplebar-react": "^3.2.4",
-    "sip.js": "^0.21.2",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "stripe": "^17.6.0",
@@ -125,6 +133,7 @@
   "devDependencies": {
     "@babel/core": "^7.23.5",
     "@babel/eslint-parser": "^7.23.3",
-    "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "dotenv": "^17.2.3"
   }
 }

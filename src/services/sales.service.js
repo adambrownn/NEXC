@@ -18,12 +18,8 @@ import { handlePaymentError } from '../utils/paymentErrorUtils';
 import {
   normalizeOrderObject,
   normalizeCustomerObject,
-  poundsToPence,
-  penceToPounds,
-  prepareAmountForApi,
-  prepareAmountForDisplay
-} from '../utils/dataNormalization';
-import { getId, getOrderAmount, getCustomerName } from '../utils/propertyAccessUtils';
+  getId
+} from '../utils/dataNormalizationClient';
 
 class SalesService {
   constructor() {
@@ -99,7 +95,7 @@ class SalesService {
         await this.initialize();
       }
 
-      const response = await axiosInstance.get('/trade-service-associations', {
+      const response = await axiosInstance.get('/trade-associations', {
         params: {
           useRegistry: true
         }
@@ -122,7 +118,7 @@ class SalesService {
       const errorObj = new Error(errorMessage);
       errorObj.statusCode = error.response?.status;
       errorObj.timestamp = new Date().toISOString();
-      errorObj.endpoint = '/trade-service-associations';
+      errorObj.endpoint = '/trade-associations';
 
       throw errorObj;
     }
@@ -417,7 +413,7 @@ class SalesService {
         await this.initialize();
       }
 
-      const response = await axiosInstance.get(`/orders/customers/${customerId}`);
+      const response = await axiosInstance.get(`/customers/${customerId}/bookings`);
       return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
       console.error('Error fetching customer orders:', error);
@@ -437,7 +433,7 @@ class SalesService {
         await this.initialize();
       }
 
-      const response = await axiosInstance.get(`/customers/customers/${customerId}/services`);
+      const response = await axiosInstance.get(`/customers/${customerId}/services`);
       return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
       console.error('Error fetching customer services:', error);
@@ -448,6 +444,44 @@ class SalesService {
         return this.getCustomerServices(customerId);
       }
       throw new Error(error.response?.data?.message || 'Failed to fetch customer services');
+    }
+  }
+
+  async deleteCustomer(customerId) {
+    try {
+      if (!this.initialized) {
+        await this.initialize();
+      }
+
+      const response = await axiosInstance.delete(`/customers/${customerId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      if (!this.initialized) {
+        // If not initialized, try to initialize again
+        await this.initialize();
+        // Retry the request once
+        return this.deleteCustomer(customerId);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to delete customer');
+    }
+  }
+
+  async getCustomerHistory(customerId) {
+    try {
+      if (!this.initialized) {
+        await this.initialize();
+      }
+
+      const response = await axiosInstance.get(`/customers/${customerId}/history`);
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      console.error('Error fetching customer history:', error);
+      if (!this.initialized) {
+        await this.initialize();
+        return this.getCustomerHistory(customerId);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch customer history');
     }
   }
 
@@ -538,25 +572,25 @@ class SalesService {
     }
   }
 
-  async getCustomerHistory(customerId) {
-    try {
-      if (!this.initialized) {
-        await this.initialize();
-      }
+  // async getCustomerHistory(customerId) {
+  //   try {
+  //     if (!this.initialized) {
+  //       await this.initialize();
+  //     }
 
-      const response = await axiosInstance.get(`/trades/customers/${customerId}/history`);
-      return Array.isArray(response.data) ? response.data : [];
-    } catch (error) {
-      console.error('Error fetching customer history:', error);
-      if (!this.initialized) {
-        // If not initialized, try to initialize again
-        await this.initialize();
-        // Retry the request once
-        return this.getCustomerHistory(customerId);
-      }
-      throw new Error(error.response?.data?.message || 'Failed to fetch customer history');
-    }
-  }
+  //     const response = await axiosInstance.get(`/customers/${customerId}/history`);
+  //     return Array.isArray(response.data) ? response.data : [];
+  //   } catch (error) {
+  //     console.error('Error fetching customer history:', error);
+  //     if (!this.initialized) {
+  //       // If not initialized, try to initialize again
+  //       await this.initialize();
+  //       // Retry the request once
+  //       return this.getCustomerHistory(customerId);
+  //     }
+  //     throw new Error(error.response?.data?.message || 'Failed to fetch customer history');
+  //   }
+  // }
 
   async getCustomerBookings(customerId) {
     try {
@@ -713,6 +747,30 @@ class SalesService {
   }
 
   // Trade Management
+  async createTrade(tradeData) {
+    try {
+      if (!this.initialized) {
+        await this.initialize();
+      }
+
+      console.log('Creating trade:', tradeData);
+      const response = await axiosInstance.post('/trades', tradeData);
+      
+      if (response.data?.success) {
+        return response.data.data || response.data;
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error creating trade:', error);
+      if (!this.initialized) {
+        await this.initialize();
+        return this.createTrade(tradeData);
+      }
+      throw new Error(error.response?.data?.error || error.message || 'Failed to create trade');
+    }
+  }
+
   async getTrades() {
     try {
       if (!this.initialized) {
@@ -880,7 +938,7 @@ class SalesService {
       }
 
       console.log('Fetching trade service associations...');
-      const response = await axiosInstance.get('/trade-service-associations');
+      const response = await axiosInstance.get('/trade-associations');
       console.log('Raw trade service associations response:', response);
 
       // Handle different response formats and ensure trade data is populated
@@ -917,6 +975,7 @@ class SalesService {
         mappedAssoc.cards = assoc.cards || [];
         mappedAssoc.tests = assoc.tests || [];
         mappedAssoc.courses = assoc.courses || [];
+        mappedAssoc.qualifications = assoc.qualifications || [];
 
         return mappedAssoc;
       });
@@ -937,11 +996,12 @@ class SalesService {
       }
 
       console.log('Creating trade service association with data:', data);
-      const response = await axiosInstance.post('/trade-service-associations', {
+      const response = await axiosInstance.post('/trade-associations', {
         trade: data.trade,
         cards: data.cards || [],
         tests: data.tests || [],
-        courses: data.courses || []
+        courses: data.courses || [],
+        qualifications: data.qualifications || []
       });
 
       console.log('Raw create association response:', response);
@@ -973,11 +1033,12 @@ class SalesService {
         await this.initialize();
       }
 
-      const response = await axiosInstance.put(`/trade-service-associations/${associationId}`, {
+      const response = await axiosInstance.put(`/trade-associations/${associationId}`, {
         trade: data.trade,
         cards: data.cards || [],
         tests: data.tests || [],
-        courses: data.courses || []
+        courses: data.courses || [],
+        qualifications: data.qualifications || []
       });
       return response.data;
     } catch (error) {
@@ -997,7 +1058,7 @@ class SalesService {
       }
 
       console.log('Deleting trade service association:', associationId);
-      const response = await axiosInstance.delete(`/trade-service-associations/${associationId}`);
+      const response = await axiosInstance.delete(`/trade-associations/${associationId}`);
       console.log('Delete association response:', response.data);
 
       return response.data;

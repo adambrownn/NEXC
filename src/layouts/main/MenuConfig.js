@@ -64,7 +64,7 @@ const navConfig = [
     icon: <Icon icon={bookOpenFill} {...ICON_SIZE} />,
     path: PATH_PAGE.qualifications,
   },
-  { title: "Group Booking", path: "#" }, // Use # to prevent navigation
+  { title: "Group Booking", path: "/groupbooking" }
 ];
 
 export default navConfig;

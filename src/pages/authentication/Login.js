@@ -11,6 +11,7 @@ import {
   Typography,
   alpha,
   Icon,
+  // Button,
 } from "@mui/material";
 // routes
 import { PATH_AUTH } from "../../routes/paths";
@@ -97,7 +98,8 @@ const ContentStyle = styled("div")(({ theme }) => ({
   }
 }));
 
-export default function Login(props) {
+export default function Login() {
+
   React.useEffect(() => {
     (async () => {
       const currentUser = await AuthService.getCurrentUser();
@@ -105,7 +107,7 @@ export default function Login(props) {
         window.location.replace(`/dashboard`);
       }
     })();
-  }, [props]);
+  }, []);
 
   return (
     <RootStyle title="Login | NEXC">
@@ -138,7 +140,7 @@ export default function Login(props) {
         </SectionStyle>
       </MHidden>
 
-      <Container>
+      <Container maxWidth="sm">
         <ContentStyle>
           <motion.div
             initial={{ opacity: 0, y: 20 }}

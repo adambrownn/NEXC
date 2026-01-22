@@ -3,12 +3,12 @@
  * Handles API calls for creating and managing service requests
  */
 
-import axios from '../axiosConfig';
+import axiosInstance from '../axiosConfig';
 import {
     normalizeOrderObject,
     normalizeCustomerObject,
     prepareAmountForApi
-} from '../utils/dataNormalizationClient';
+} from '../utils/dataNormalizationClient'; // Updated import path
 import {
     PAYMENT_METHOD_TYPES,
     PAYMENT_STATUS
@@ -42,7 +42,7 @@ class ServiceRequestService {
             };
 
             // Make the API call
-            const response = await axios.post('/api/v1/service-requests', payload);
+            const response = await axiosInstance.post('/api/v1/service-requests', payload);
 
             // Return the normalized response
             return {
@@ -65,7 +65,7 @@ class ServiceRequestService {
      */
     async getServiceRequests(filters = {}) {
         try {
-            const response = await axios.get('/api/v1/service-requests', {
+            const response = await axiosInstance.get('/api/v1/service-requests', {
                 params: filters
             });
 
@@ -86,6 +86,51 @@ class ServiceRequestService {
             };
         }
     }
+
+    /**
+     * Get service requests by customer ID (for profile page)
+     * @param {string} customerId - Customer ID
+     * @returns {Promise<Array>} Customer's service requests
+     */
+    async getByCustomerId(customerId) {
+        try {
+            const response = await axiosInstance.get(`/api/v1/service-requests/customer/${customerId}`);
+
+            // Normalize service requests
+            const normalizedRequests = Array.isArray(response.data)
+                ? response.data.map(request => normalizeOrderObject(request))
+                : [];
+
+            return normalizedRequests;
+        } catch (error) {
+            console.error('Error fetching customer service requests:', error);
+            // Return empty array on error for graceful degradation
+            return [];
+        }
+    }
+
+    /**
+     * Get all service requests
+     * @returns {Promise<Array>} All service requests
+     */
+    async getAll() {
+        try {
+            const response = await axiosInstance.get('/api/v1/service-requests');
+
+            // Normalize service requests
+            const normalizedRequests = Array.isArray(response.data)
+                ? response.data.map(request => normalizeOrderObject(request))
+                : [];
+
+            return normalizedRequests;
+        } catch (error) {
+            console.error('Error fetching all service requests:', error);
+            // Return empty array on error for graceful degradation
+            return [];
+        }
+    }
 }
 
-export default new ServiceRequestService();
+// Fix ESLint warning by assigning to variable before export
+const serviceRequestService = new ServiceRequestService();
+export default serviceRequestService;

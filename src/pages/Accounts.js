@@ -1,15 +1,21 @@
-import { Container, Typography } from "@mui/material";
-import TableDataList from "../components/accounts/TableDataList";
-import Page from "../components/Page";
+import React from 'react';
+import { Container, Typography, Card, CardContent } from '@mui/material';
+import Page from '../components/Page';
 
 export default function Accounts() {
   return (
-    <Page title="Accounts | CSL">
-      <Container maxWidth="xl" height="xl">
-        <Typography variant="h4" sx={{ mb: 5 }}>
-          Accounts (Users, Admin, Visitors)
+    <Page title="Accounts | NEXC Construction Platform">
+      <Container>
+        <Typography variant="h4" gutterBottom>
+          Account Management
         </Typography>
-        <TableDataList />
+        <Card>
+          <CardContent>
+            <Typography variant="body1">
+              Account management functionality is under development.
+            </Typography>
+          </CardContent>
+        </Card>
       </Container>
     </Page>
   );

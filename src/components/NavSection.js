@@ -13,7 +13,7 @@ import arrowIosDownwardFill from "@iconify/icons-eva/arrow-ios-downward-fill";
 import {
   alpha,
   useTheme,
-  experimentalStyled as styled,
+  styled,
 } from "@mui/material/styles";
 import {
   Box,
@@ -32,42 +32,109 @@ const ListSubheaderStyle = styled((props) => (
 ))(({ theme }) => ({
   ...theme.typography.overline,
   marginTop: theme.spacing(3),
-  marginBottom: theme.spacing(2),
+  marginBottom: theme.spacing(1.5),
   paddingLeft: theme.spacing(5),
+  paddingRight: theme.spacing(2.5),
   color: theme.palette.text.primary,
+  fontWeight: 600,
+  fontSize: '0.6875rem',
+  letterSpacing: '0.08em',
+  
+  // Mobile optimizations
+  [theme.breakpoints.down('md')]: {
+    paddingLeft: theme.spacing(4),
+    marginTop: theme.spacing(2.5),
+    fontSize: '0.65rem',
+  },
+  
+  // Tablet optimizations
+  [theme.breakpoints.between('md', 'xl')]: {
+    paddingLeft: theme.spacing(4.5),
+    fontSize: '0.6875rem',
+  },
 }));
 
 const ListItemStyle = styled((props) => (
   <ListItem button disableGutters {...props} />
 ))(({ theme }) => ({
   ...theme.typography.body2,
-  height: 48,
+  // Touch-friendly minimum height from breakpoints
+  minHeight: theme.breakpoints?.values?.minTarget || 44,
+  height: 'auto',
   position: "relative",
   textTransform: "capitalize",
+  paddingTop: theme.spacing(1.25),
+  paddingBottom: theme.spacing(1.25),
   paddingLeft: theme.spacing(5),
   paddingRight: theme.spacing(2.5),
   color: theme.palette.text.secondary,
+  borderRadius: theme.spacing(1),
+  margin: `${theme.spacing(0.25)} ${theme.spacing(1)}`,
+  transition: theme.transitions.create(['background-color', 'color', 'transform'], {
+    duration: theme.transitions.duration.shorter,
+  }),
+  
+  // Enhanced touch interactions
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    transform: 'translateX(2px)',
+  },
+  
+  '&:active': {
+    transform: 'translateX(2px) scale(0.98)',
+  },
+  
+  // Mobile-specific optimizations
+  [theme.breakpoints.down('md')]: {
+    minHeight: theme.breakpoints?.values?.minTarget || 44,
+    paddingTop: theme.spacing(1.5),
+    paddingBottom: theme.spacing(1.5),
+    paddingLeft: theme.spacing(4),
+    fontSize: '0.9rem',
+  },
+  
+  // Tablet optimizations
+  [theme.breakpoints.between('md', 'xl')]: {
+    paddingLeft: theme.spacing(4.5),
+    fontSize: '0.875rem',
+  },
+  
   "&:before": {
     top: 0,
-    right: 0,
+    left: 0,
     width: 3,
     bottom: 0,
     content: "''",
     display: "none",
     position: "absolute",
-    borderTopLeftRadius: 4,
-    borderBottomLeftRadius: 4,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
     backgroundColor: theme.palette.primary.main,
   },
 }));
 
-const ListItemIconStyle = styled(ListItemIcon)({
-  width: 22,
-  height: 22,
+const ListItemIconStyle = styled(ListItemIcon)(({ theme }) => ({
+  width: 24,
+  height: 24,
+  minWidth: 24,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-});
+  marginRight: theme.spacing(2),
+  color: 'inherit',
+  
+  // Enhanced mobile icon sizing
+  [theme.breakpoints.down('md')]: {
+    width: 26,
+    height: 26,
+    minWidth: 26,
+  },
+  
+  '& svg, & .iconify': {
+    width: '100%',
+    height: '100%',
+  },
+}));
 
 // ----------------------------------------------------------------------
 
@@ -89,16 +156,21 @@ function NavItem({ item, active }) {
   const activeRootStyle = {
     color: "primary.main",
     fontWeight: "fontWeightMedium",
-    bgcolor: alpha(
-      theme.palette.primary.main,
-      theme.palette.action.selectedOpacity
-    ),
+    bgcolor: alpha(theme.palette.primary.main, 0.12),
+    transform: 'translateX(2px)',
+    boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.24)}`,
     "&:before": { display: "block" },
+    "&:hover": {
+      bgcolor: alpha(theme.palette.primary.main, 0.16),
+      transform: 'translateX(2px)',
+    },
   };
 
   const activeSubStyle = {
-    color: "text.primary",
+    color: "primary.main",
     fontWeight: "fontWeightMedium",
+    bgcolor: alpha(theme.palette.primary.main, 0.08),
+    transform: 'translateX(2px)',
   };
 
   if (children) {

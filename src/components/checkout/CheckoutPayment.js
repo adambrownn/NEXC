@@ -29,15 +29,12 @@ import PaymentSecurityNotice from './payment/PaymentSecurityNotice';
 
 // Import CartContext
 import { useCart } from '../../contexts/CartContext';
-import { logRender, measurePerformance } from '../../utils/performanceUtils';
+import { logRender } from '../../utils/performanceUtils';
 
-// Add imports for normalization utilities
+// Add the missing imports - FIXED: Use client version
 import {
-  normalizeOrderObject,
   normalizeCustomerObject,
-  prepareAmountForApi,
-  prepareAmountForDisplay
-} from '../../utils/dataNormalization';
+} from '../../utils/dataNormalizationClient';
 
 // Use the centralized Stripe service to get the Stripe instance
 const stripePromise = StripeService.getStripe();
@@ -84,55 +81,21 @@ function CheckoutPayment() {
   const [paymentError, setPaymentError] = useState(null);
   const [paymentIntentLoading, setPaymentIntentLoading] = useState(false);
 
-  // Memoize expensive calculations
+  // Memoize expensive calculations - using existing simple calculation
   const { totalAmountInPounds, totalAmount, displayAmount } = useMemo(() => {
-    return measurePerformance('CheckoutPayment - Calculate Amounts', () => {
-      // Calculate total amount in pounds
-      const totalAmountInPounds = items.reduce((total, item) => (
-        total + (Number(item.price) * (item.quantity || 1))
-      ), 0);
+    // Calculate total amount in pounds
+    const totalAmountInPounds = items.reduce((total, item) => (
+      total + (Number(item.price) * (item.quantity || 1))
+    ), 0);
 
-      // Convert to pence for Stripe (multiply by 100)
-      // Ensure we're working with a proper number format
-      const totalAmount = Math.round(totalAmountInPounds * 100);
+    // Convert to pence for Stripe (multiply by 100)
+    const totalAmount = Math.round(totalAmountInPounds * 100);
 
-      // Format for display (pounds)
-      const displayAmount = totalAmountInPounds.toFixed(2);
+    // Format for display (pounds)
+    const displayAmount = totalAmountInPounds.toFixed(2);
 
-      return { totalAmountInPounds, totalAmount, displayAmount };
-    });
-  }, [items]); // Only recalculate when items array changes
-
-  // Use normalized data
-  const normalizedItems = useMemo(() => {
-    return items.map(item => ({
-      ...item,
-      price: Number(item.price),
-      quantity: Number(item.quantity) || 1
-    }));
+    return { totalAmountInPounds, totalAmount, displayAmount };
   }, [items]);
-
-  // Normalize customer data
-  const normalizedCustomer = useMemo(() => {
-    return normalizeCustomerObject(customer);
-  }, [customer]);
-
-  // Calculate standardized amount
-  const standardizedAmount = useMemo(() => {
-    return normalizedItems.reduce((sum, item) => {
-      return sum + (item.price * item.quantity);
-    }, 0);
-  }, [normalizedItems]);
-
-  // Format amount for display
-  const formattedAmount = useMemo(() => {
-    return prepareAmountForDisplay(standardizedAmount);
-  }, [standardizedAmount]);
-
-  // Amount in pence for Stripe
-  const amountInPence = useMemo(() => {
-    return prepareAmountForApi(standardizedAmount);
-  }, [standardizedAmount]);
 
   // Initialize payment intent when component mounts
   useEffect(() => {
@@ -215,6 +178,11 @@ function CheckoutPayment() {
     setOrderId,
     handleNext
   ]);
+
+  // Use normalized data properly
+  const normalizedCustomer = useMemo(() => {
+    return normalizeCustomerObject(customer);
+  }, [customer]);
 
   if (!stripePromise) {
     return (
@@ -310,7 +278,7 @@ function CheckoutPayment() {
                     handleCompleteOrder={handleCompleteOrder}
                     amount={totalAmount}
                     displayAmount={displayAmount}
-                    cardholderName={customer?.name}
+                    cardholderName={normalizedCustomer?.name}
                     formInput={formInput}
                     setFormInput={setFormInput}
                     disabled={processing || operationInProgress}

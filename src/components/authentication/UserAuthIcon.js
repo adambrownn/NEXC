@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     IconButton,
@@ -18,11 +18,10 @@ import { Icon } from '@iconify/react';
 import personFill from '@iconify/icons-eva/person-fill';
 import loginFill from '@iconify/icons-eva/log-in-fill';
 import personAddFill from '@iconify/icons-eva/person-add-fill';
-// import settingsFill from '@iconify/icons-eva/settings-2-fill';
-import fileTextFill from '@iconify/icons-eva/file-text-fill';
+import homeFill from '@iconify/icons-eva/home-fill';
 
-// You'll need to import your auth service/context here
-// import { useAuth } from '../../contexts/AuthContext';
+// Import AuthContext
+import { useAuth } from '../../contexts/AuthContext';
 
 const ICON_SIZE = {
     width: 22,
@@ -42,37 +41,10 @@ const StyledAvatar = styled(Avatar)(({ theme }) => ({
 // Update function definition to receive props
 export default function UserAuthIcon({ isHome = false, isOffset = false }) {
     const [anchorEl, setAnchorEl] = useState(null);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [userData, setUserData] = useState(null);
-    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-    // const { isAuthenticated, user, logout } = useAuth(); // When you implement auth context
-
-    useEffect(() => {
-        // Check if user is authenticated
-        // Replace this with your actual authentication check
-        const checkAuth = async () => {
-            setLoading(true);
-            // Example - replace with your auth logic
-            const token = localStorage.getItem('token');
-
-            if (token) {
-                setIsAuthenticated(true);
-                // Fetch user data or decode JWT
-                setUserData({
-                    name: 'John Doe', // Replace with actual user data
-                    email: 'john@example.com',
-                    initials: 'JD'
-                });
-            } else {
-                setIsAuthenticated(false);
-                setUserData(null);
-            }
-            setLoading(false);
-        };
-
-        checkAuth();
-    }, []);
+    
+    // Use AuthContext for authentication state
+    const { isAuthenticated, user, loading, logout } = useAuth();
 
     const handleMenu = (event) => {
         setAnchorEl(event.currentTarget);
@@ -93,21 +65,30 @@ export default function UserAuthIcon({ isHome = false, isOffset = false }) {
     };
 
     const handleProfile = () => {
-        navigate('/profile');
+        // Route based on user role
+        const userRole = user?.accountType || user?.role;
+        const isCustomerRole = !userRole || userRole === 'user' || userRole === 'visitor';
+        
+        if (isCustomerRole) {
+            navigate('/customer/profile');
+        } else {
+            navigate('/dashboard/account');
+        }
         handleClose();
     };
 
-    const handleOrders = () => {
-        navigate('/orders');
+    const handleDashboard = () => {
+        navigate('/dashboard');
         handleClose();
     };
 
-    const handleLogout = () => {
-        // Replace with your logout logic
-        localStorage.removeItem('token');
-        setIsAuthenticated(false);
-        setUserData(null);
-        // logout(); // When you implement auth context
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
         handleClose();
     };
 
@@ -138,8 +119,11 @@ export default function UserAuthIcon({ isHome = false, isOffset = false }) {
                             <CircularProgress size={20} color="inherit" thickness={2} />
                         </Box>
                     ) : isAuthenticated ? (
-                        <StyledAvatar alt={userData?.name}>
-                            {userData?.initials || userData?.name?.charAt(0) || ''}
+                        <StyledAvatar 
+                            alt={user?.displayName || user?.name || user?.email}
+                            src={user?.photoURL || user?.profileImage}
+                        >
+                            {user?.displayName?.charAt(0) || user?.name?.charAt(0) || user?.email?.charAt(0) || ''}
                         </StyledAvatar>
                     ) : (
                         <Icon icon={personFill} {...ICON_SIZE} />
@@ -177,23 +161,33 @@ export default function UserAuthIcon({ isHome = false, isOffset = false }) {
                     <>
                         <Box sx={{ my: 1.5, px: 2.5 }}>
                             <Typography variant="subtitle2" noWrap>
-                                {userData?.name}
+                                {user?.displayName || user?.name || 'User'}
                             </Typography>
                             <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
-                                {userData?.email}
+                                {user?.email}
                             </Typography>
                         </Box>
                         <Divider sx={{ my: 1 }} />
+                        
+                        {/* Show Dashboard for staff/admin roles */}
+                        {user?.accountType && !['user', 'visitor'].includes(user.accountType) && (
+                            <MenuItem onClick={handleDashboard} sx={{ py: 1 }}>
+                                <ListItemIcon><Icon icon={homeFill} {...ICON_SIZE} /></ListItemIcon>
+                                <ListItemText primary="Dashboard" />
+                            </MenuItem>
+                        )}
+                        
                         <MenuItem onClick={handleProfile} sx={{ py: 1 }}>
                             <ListItemIcon><Icon icon={personFill} {...ICON_SIZE} /></ListItemIcon>
-                            <ListItemText primary="Profile" />
+                            <ListItemText primary={
+                                user?.accountType && !['user', 'visitor'].includes(user.accountType)
+                                    ? "Account Settings"
+                                    : "My Profile & Orders"
+                            } />
                         </MenuItem>
-                        <MenuItem onClick={handleOrders} sx={{ py: 1 }}>
-                            <ListItemIcon>
-                                <Icon icon={fileTextFill} {...ICON_SIZE} />
-                            </ListItemIcon>
-                            <ListItemText primary="My Orders" />
-                        </MenuItem>
+                        
+                        <Divider sx={{ my: 1 }} />
+                        
                         <MenuItem onClick={handleLogout} sx={{ py: 1 }}>
                             <ListItemIcon><Icon icon={loginFill} {...ICON_SIZE} style={{ transform: 'scaleX(-1)' }} /></ListItemIcon>
                             <ListItemText primary="Logout" />

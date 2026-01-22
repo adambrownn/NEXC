@@ -8,10 +8,15 @@ const qualificationsService = require("./qualifications.service");
 
 router
   .route("/")
-  // get all Qualifications
+  // get all Qualifications with pagination
   .get(qualificationsService.getQualifications)
   // create Qualification
   .post(extractTokenDetails, qualificationsService.createQualification);
+
+router
+  .route("/stats")
+  // get qualification statistics
+  .get(qualificationsService.getQualificationsStats);
 
 router
   .route("/:qualificationId")

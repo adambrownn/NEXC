@@ -9,10 +9,9 @@ import StripeService from '../stripe';
 
 // Add imports for normalization utilities
 import {
-  normalizeOrderObject,
   normalizeCustomerObject,
   prepareAmountForApi
-} from '../../utils/dataNormalization';
+} from '../../utils/dataNormalizationClient';
 
 // Add imports for error handling
 import { handlePaymentError } from '../../utils/paymentErrorUtils';

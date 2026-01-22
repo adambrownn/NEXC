@@ -135,15 +135,183 @@ class BlogService {
   async uploadImage(file) {
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      const response = await axios.post('/upload', formData, {
+      formData.append('files', file); // Media endpoint expects 'files' plural
+      formData.append('category', 'blog');
+      
+      const response = await axios.post('/media', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-      return response.data;
+      
+      // Media API returns array of uploaded files
+      const uploadedFile = response.data.data[0];
+      return {
+        url: uploadedFile.url,
+        ...uploadedFile
+      };
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to upload image');
+    }
+  }
+
+  async getBlogBySlug(slug) {
+    try {
+      const response = await axios.get(`/blogs/slug/${slug}`);
+      return response.data;
+    } catch (error) {
+      if (this.useMockData) {
+        console.info('Using mock data for blog by slug (development mode)');
+        return {
+          data: MOCK_DATA.data[0]
+        };
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch blog post');
+    }
+  }
+
+  async analyzeSEO(id) {
+    try {
+      const response = await axios.post(`/blogs/${id}/seo-analyze`);
+      return response.data;
+    } catch (error) {
+      if (this.useMockData) {
+        console.info('Using mock data for SEO analysis (development mode)');
+        return {
+          success: true,
+          data: {
+            score: 75,
+            issues: ['Meta description could be longer'],
+            suggestions: ['Add more relevant keywords', 'Include Open Graph metadata'],
+            keywords: ['construction', 'safety', 'training']
+          }
+        };
+      }
+      throw new Error(error.response?.data?.message || 'Failed to analyze SEO');
+    }
+  }
+
+  async generateStructuredData(blog) {
+    return {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": blog.title,
+      "description": blog.excerpt,
+      "image": blog.coverImage,
+      "author": {
+        "@type": "Person",
+        "name": blog.author.name
+      },
+      "datePublished": blog.publishedAt || blog.createdAt,
+      "dateModified": blog.updatedAt,
+      "publisher": {
+        "@type": "Organization",
+        "name": "NEXC",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://nexc.com/logo.png"
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": `https://nexc.com/blog/${blog.slug}`
+      }
+    };
+  }
+
+  async getCalendarPosts(startDate, endDate) {
+    try {
+      const response = await axios.get('/blogs/calendar', {
+        params: { start: startDate, end: endDate }
+      });
+      return response.data;
+    } catch (error) {
+      if (this.useMockData) {
+        console.info('Using mock data for calendar posts (development mode)');
+        return {
+          success: true,
+          data: [
+            {
+              ...MOCK_DATA.data[0],
+              scheduledAt: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+              status: 'scheduled'
+            }
+          ]
+        };
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch calendar posts');
+    }
+  }
+
+  async scheduleBlog(id, scheduledAt, schedulingSettings = {}) {
+    try {
+      const response = await axios.patch(`/blogs/${id}/schedule`, {
+        scheduledAt,
+        schedulingSettings
+      });
+      return response.data;
+    } catch (error) {
+      if (this.useMockData) {
+        console.info('Using mock data for blog scheduling (development mode)');
+        return {
+          success: true,
+          data: {
+            ...MOCK_DATA.data[0],
+            _id: id,
+            status: 'scheduled',
+            scheduledAt,
+            schedulingSettings
+          }
+        };
+      }
+      throw new Error(error.response?.data?.message || 'Failed to schedule blog post');
+    }
+  }
+
+  async updateWorkflow(id, workflowData) {
+    try {
+      const response = await axios.patch(`/blogs/${id}/workflow`, workflowData);
+      return response.data;
+    } catch (error) {
+      if (this.useMockData) {
+        console.info('Using mock data for workflow update (development mode)');
+        return {
+          success: true,
+          data: {
+            ...MOCK_DATA.data[0],
+            _id: id,
+            workflow: {
+              currentStage: workflowData.stage || 'draft',
+              assignedTo: workflowData.assignedTo,
+              reviewNotes: [
+                {
+                  author: 'mock-user-id',
+                  note: workflowData.note || 'Workflow updated',
+                  timestamp: new Date().toISOString()
+                }
+              ]
+            }
+          }
+        };
+      }
+      throw new Error(error.response?.data?.message || 'Failed to update workflow');
+    }
+  }
+
+  async processScheduledPosts() {
+    try {
+      const response = await axios.post('/blogs/process-scheduled');
+      return response.data;
+    } catch (error) {
+      if (this.useMockData) {
+        console.info('Using mock data for processing scheduled posts (development mode)');
+        return {
+          success: true,
+          message: 'No scheduled posts to process (development mode)',
+          data: []
+        };
+      }
+      throw new Error(error.response?.data?.message || 'Failed to process scheduled posts');
     }
   }
 }

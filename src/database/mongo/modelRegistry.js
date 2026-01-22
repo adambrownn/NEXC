@@ -64,6 +64,14 @@ class ModelRegistry {
             }
         }
 
+        // Fallback: Check if model exists directly in mongoose.models
+        if (mongoose.models[modelName]) {
+            console.log(`[ModelRegistry] Found ${modelName} in mongoose.models, adding to registry`);
+            const model = mongoose.models[modelName];
+            this.models.set(modelName, model);
+            return model;
+        }
+
         throw new Error(`Model ${modelName} not found in registry`);
     }
 

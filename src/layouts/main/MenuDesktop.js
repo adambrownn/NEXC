@@ -140,39 +140,8 @@ function MenuDesktopItem({
     letterSpacing: '0.01em',
   } : {};
 
-  // Special case for Group Booking - check title instead of adding a new property
-  if (title === "Group Booking" && !children) {
-    return (
-      <LinkStyle
-        component="button"
-        onClick={(e) => e.preventDefault()}
-        sx={{
-          display: "flex",
-          cursor: "pointer",
-          alignItems: "center",
-          border: 'none',
-          background: 'none',
-          ...(isHome && {
-            color: "common.white",
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            }
-          }),
-          ...(isOffset && { color: "text.primary" }),
-          ...(isActive && {
-            color: "primary.main",
-            "&::after": { width: "100%" },
-            fontWeight: 'bold',
-          }),
-          ...textShadowStyle,
-        }}
-      >
-        <GroupBookingForm menuIntegration={true}>
-          {title}
-        </GroupBookingForm>
-      </LinkStyle>
-    );
-  }
+  // Group Booking now navigates to the /groupbooking page directly
+  // No special handling needed - it's a regular nav link
 
   // Continue with existing code for menu items with children
   if (children) {
@@ -243,27 +212,27 @@ function MenuDesktopItem({
           onClose={onClose}
           PaperProps={{
             sx: {
-              px: 3,
-              pt: 5,
-              pb: 3,
+              px: 2.5,
+              pt: 3.5,
+              pb: 2.5,
               right: 16,
               margin: "auto",
-              maxWidth: 1080,
-              borderRadius: '12px', // More rounded for modern look
+              maxWidth: 720,
+              borderRadius: '12px',
               border: '1px solid',
               borderColor: 'divider',
               boxShadow: (theme) => theme.customShadows.z24,
-              animation: 'fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              animation: 'fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '@keyframes fadeIn': {
-                '0%': { opacity: 0, transform: 'translateY(-15px)' },
+                '0%': { opacity: 0, transform: 'translateY(-10px)' },
                 '100%': { opacity: 1, transform: 'translateY(0)' }
               },
               backgroundImage: (theme) =>
                 theme.palette.mode === 'light'
-                  ? 'linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 1))'
-                  : 'linear-gradient(rgba(22, 28, 36, 0.94), rgba(22, 28, 36, 0.98))',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)', // Safari support
+                  ? 'linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 1))'
+                  : 'linear-gradient(rgba(22, 28, 36, 0.96), rgba(22, 28, 36, 0.98))',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
             },
           }}
         >
@@ -278,7 +247,7 @@ function MenuDesktopItem({
                   key={subheader || `grid-${Math.random()}`}
                   item
                   xs={12}
-                  md={subheader === "Group Booking" ? 6 : 2}
+                  md={subheader === "Group Booking" ? 6 : 3}
                 >
                   <List disablePadding>
                     <ListSubheader

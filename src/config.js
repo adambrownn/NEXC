@@ -20,3 +20,13 @@ export const auth0Config = {
 };
 
 export const googleAnalyticsConfig = process.env.REACT_APP_GA_MEASUREMENT_ID;
+
+export const API_ENDPOINTS = {
+  applications: '/api/applications',
+  tests: '/api/tests',
+  cards: '/api/cards',
+  orders: '/api/orders',
+  users: '/api/users',
+  dashboard: '/api/dashboard',
+  // ... other endpoints
+};

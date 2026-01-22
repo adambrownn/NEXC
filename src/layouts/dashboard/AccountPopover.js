@@ -1,7 +1,8 @@
 import { Icon } from "@iconify/react";
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import homeFill from "@iconify/icons-eva/home-fill";
 import personFill from "@iconify/icons-eva/person-fill";
+import settingsFill from "@iconify/icons-eva/settings-fill";
 import { Link as RouterLink } from "react-router-dom";
 // material
 import { alpha } from "@mui/material/styles";
@@ -17,27 +18,42 @@ import {
 // components
 import MenuPopover from "../../components/MenuPopover";
 import AuthService from "../../services/auth.service";
+import { useAuth } from "../../contexts/AuthContext";
 
 // ----------------------------------------------------------------------
 
-const MENU_OPTIONS = [
-  {
-    label: "Home",
-    icon: homeFill,
-    linkTo: "/",
-  },
-  {
-    label: 'My Profile',
-    icon: personFill,
-    linkTo: '/customer/profile'
-  }
-];
+// Role-based menu configuration
+const getMenuOptions = (userRole) => {
+  const isCustomer = !userRole || userRole === 'user' || userRole === 'visitor';
+  
+  return [
+    {
+      label: "Home",
+      icon: homeFill,
+      linkTo: "/",
+    },
+    isCustomer ? {
+      label: 'My Services & Profile',
+      icon: personFill,
+      linkTo: '/customer/profile'
+    } : {
+      label: 'Account Settings',
+      icon: settingsFill,
+      linkTo: '/dashboard/account'
+    }
+  ];
+};
 
 // ----------------------------------------------------------------------
 
 export default function AccountPopover(props) {
+  const { user } = useAuth();
+  const userRole = user?.accountType || user?.role;
   const anchorRef = useRef(null);
   const [open, setOpen] = useState(false);
+
+  // Get menu options based on user role
+  const menuOptions = useMemo(() => getMenuOptions(userRole), [userRole]);
 
   const handleOpen = () => {
     setOpen(true);
@@ -81,6 +97,7 @@ export default function AccountPopover(props) {
         <Avatar
           src={
             props.profileImage ||
+            user?.photoURL ||
             "https://st3.depositphotos.com/15648834/17930/v/600/depositphotos_179308454-stock-illustration-unknown-person-silhouette-glasses-profile.jpg"
           }
           alt="photoURL"
@@ -95,16 +112,16 @@ export default function AccountPopover(props) {
       >
         <Box sx={{ my: 1.5, px: 2.5 }}>
           <Typography variant="subtitle1" noWrap>
-            {props.name}
+            {props.name || user?.displayName}
           </Typography>
           <Typography variant="body2" sx={{ color: "text.secondary" }} noWrap>
-            {props.email}
+            {props.email || user?.email}
           </Typography>
         </Box>
 
         <Divider sx={{ my: 1 }} />
 
-        {MENU_OPTIONS.map((option) => (
+        {menuOptions.map((option) => (
           <MenuItem
             key={option.label}
             to={option.linkTo}

@@ -40,8 +40,10 @@ import {
 } from '@mui/lab';
 import { useSnackbar } from 'notistack';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { salesService } from '../../../services/sales.service';
 import { format } from 'date-fns';
 import { CUSTOMER_TYPE } from '../../../types/customer.types';
@@ -89,6 +91,9 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState({ open: false, customer: null });
   const [customerTypeFilter, setCustomerTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [confirmationDialog, setConfirmationDialog] = useState({ open: false, customer: null });
@@ -134,6 +139,37 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
       fetchAllCustomers();
     }
   }, [isCreateDialogOpen, fetchAllCustomers]);
+
+  // Re-run search when filters change
+  useEffect(() => {
+    // Only trigger if there's a search query or filters are set
+    if (searchQuery.trim() || customerTypeFilter || statusFilter) {
+      const searchCustomers = async () => {
+        setLoading(true);
+        try {
+          // If filters are set but no search query, fetch all and filter
+          const results = await salesService.searchCustomers(searchQuery.trim() || '');
+          
+          // Apply filters
+          const filteredResults = results.filter(customer => {
+            const matchesType = !customerTypeFilter || customer.customerType === customerTypeFilter;
+            const matchesStatus = !statusFilter || customer.status === statusFilter;
+            return matchesType && matchesStatus;
+          });
+          
+          setCustomers(filteredResults);
+        } catch (error) {
+          console.error('Search error:', error);
+          setCustomers([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      searchCustomers();
+    } else {
+      setCustomers([]);
+    }
+  }, [customerTypeFilter, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const debouncedSearch = (query) => {
     const searchCustomers = async () => {
@@ -184,6 +220,35 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
     setSelectedCustomer(null);
   };
 
+  const handleCustomerUpdated = (updatedCustomer) => {
+    // Update customer in list
+    setCustomers(prev => prev.map(c => c._id === updatedCustomer._id ? updatedCustomer : c));
+    setAllCustomers(prev => prev.map(c => c._id === updatedCustomer._id ? updatedCustomer : c));
+    
+    // Update selected customer if open
+    if (selectedCustomer && selectedCustomer._id === updatedCustomer._id) {
+      setSelectedCustomer(updatedCustomer);
+    }
+    
+    // Close edit dialog
+    setIsEditDialogOpen(false);
+    setEditingCustomer(null);
+    
+    enqueueSnackbar('Customer updated successfully', { variant: 'success' });
+  };
+
+  const handleCustomerDeleted = (deletedCustomerId) => {
+    // Remove from lists
+    setCustomers(prev => prev.filter(c => c._id !== deletedCustomerId));
+    setAllCustomers(prev => prev.filter(c => c._id !== deletedCustomerId));
+    
+    // Close dialogs
+    setDeleteConfirmDialog({ open: false, customer: null });
+    setSelectedCustomer(null);
+    
+    enqueueSnackbar('Customer deleted successfully', { variant: 'success' });
+  };
+
   const handleCustomerSelect = (customer) => {
     setConfirmationDialog({ open: true, customer });
   };
@@ -213,7 +278,7 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
       ) : (
         customers.map((customer) => (
           <React.Fragment key={customer._id}>
-            <ListItem button onClick={() => handleCustomerSelect(customer)}>
+            <ListItem button onClick={() => handleViewDetails(customer)}>
               <ListItemText
                 primary={
                   customer.customerType === CUSTOMER_TYPE.COMPANY
@@ -253,6 +318,19 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
                 >
                   <VisibilityIcon />
                 </IconButton>
+                {onCustomerSelect && (
+                  <IconButton
+                    edge="end"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCustomerSelect(customer);
+                    }}
+                    title="Select for Order"
+                    color="primary"
+                  >
+                    <CheckCircleIcon />
+                  </IconButton>
+                )}
               </ListItemSecondaryAction>
             </ListItem>
             <Divider />
@@ -273,6 +351,20 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
     const handleStatusUpdateClick = () => {
       setShowStatusUpdate(true);
     };
+
+    const handleEditCustomer = () => {
+      setEditingCustomer(customer);
+      setIsEditDialogOpen(true);
+      onClose(); // Close details dialog
+    };
+
+    const handleDeleteCustomer = () => {
+      setDeleteConfirmDialog({ open: true, customer });
+      onClose(); // Close details dialog
+    };
+
+    // Hide edit/delete buttons when in sales portal selection mode
+    const isSelectionMode = Boolean(onCustomerSelect);
 
     return (
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -369,6 +461,26 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Close</Button>
+          {!isSelectionMode && (
+            <>
+              <Button
+                startIcon={<EditIcon />}
+                onClick={handleEditCustomer}
+                variant="outlined"
+                color="primary"
+              >
+                Edit Customer
+              </Button>
+              <Button
+                startIcon={<DeleteIcon />}
+                onClick={handleDeleteCustomer}
+                variant="outlined"
+                color="error"
+              >
+                Delete Customer
+              </Button>
+            </>
+          )}
         </DialogActions>
 
         {/* Status Update Dialog */}
@@ -533,31 +645,60 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
     return (
       <List>
         {orders.map((order) => (
-          <React.Fragment key={order._id}>
+          <React.Fragment key={order._id || order.id}>
             <ListItem>
               <ListItemText
                 primary={
-                  <Typography variant="subtitle2">
-                    Order #{order._id}
-                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle1">
+                      Order #{order._id ? order._id.slice(-8) : (order.id || 'N/A')}
+                    </Typography>
+                    <Chip
+                      size="small"
+                      label={order.paymentStatus === 2 ? 'Paid' : order.paymentStatus === 1 ? 'Processing' : 'Pending'}
+                      color={order.paymentStatus === 2 ? 'success' : order.paymentStatus === 1 ? 'info' : 'warning'}
+                    />
+                  </Box>
                 }
                 secondary={
-                  <Stack spacing={1}>
-                    <Typography variant="body2" color="text.secondary">
-                      Created: {format(new Date(order.createdAt), 'PPp')}
-                    </Typography>
-                    <Stack direction="row" spacing={2}>
-                      <Typography variant="body2">
-                        Amount: £{order.grandTotal?.toFixed(2)}
+                  <Grid container spacing={1}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary" component="span">
+                        <strong>Created:</strong> {format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm')}
                       </Typography>
-                      <Chip
-                        size="small"
-                        label={order.payStatus ? 'Paid' : 'Pending'}
-                        color={order.payStatus ? 'success' : 'warning'}
-                      />
-                    </Stack>
-                  </Stack>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" color="text.secondary" component="span">
+                        <strong>Status:</strong> {
+                          order.orderCheckPoint === 4 ? 'Completed' :
+                          order.orderCheckPoint === 3 ? 'Pending Payment' :
+                          order.orderCheckPoint === 2 ? 'In Checkout' :
+                          'In Cart'
+                        }
+                      </Typography>
+                    </Grid>
+                    {order.items && order.items.length > 0 && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }} component="span">
+                          <strong>Items ({order.items.length}):</strong>
+                        </Typography>
+                        <Box sx={{ ml: 2, mt: 0.5 }}>
+                          {order.items.slice(0, 3).map((item, idx) => (
+                            <Typography key={idx} variant="body2" color="text.secondary" component="div">
+                              • {item.serviceName || item.serviceType || 'Service'} - £{item.price?.toFixed(2) || '0.00'}
+                            </Typography>
+                          ))}
+                          {order.items.length > 3 && (
+                            <Typography variant="body2" color="text.secondary" fontStyle="italic" component="div">
+                              ... and {order.items.length - 3} more
+                            </Typography>
+                          )}
+                        </Box>
+                      </Grid>
+                    )}
+                  </Grid>
                 }
+                secondaryTypographyProps={{ component: 'div' }}
               />
             </ListItem>
             <Divider />
@@ -616,18 +757,40 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
                     <Typography variant="subtitle1">{service.title}</Typography>
                     <Chip
                       size="small"
-                      label={service.status}
-                      color={service.status === 'active' ? 'success' : 'default'}
+                      label={
+                        service.status === 'active' ? 'Active' :
+                        service.status === 'expiring_soon' ? 'Expiring Soon' :
+                        'Expired'
+                      }
+                      color={
+                        service.status === 'active' ? 'success' :
+                        service.status === 'expiring_soon' ? 'warning' :
+                        'error'
+                      }
                     />
                   </Stack>
-                  <Typography variant="body2" color="text.secondary">
-                    {service.description}
+                  <Typography variant="body2" color="text.secondary" textTransform="capitalize">
+                    Type: {service.type}
                   </Typography>
-                  {service.expiryDate && (
-                    <Typography variant="body2">
-                      Expires: {format(new Date(service.expiryDate), 'PP')}
-                    </Typography>
-                  )}
+                  <Grid container spacing={1}>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Purchased:</strong> {format(new Date(service.purchaseDate), 'dd/MM/yyyy')}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Expires:</strong> {format(new Date(service.expiryDate), 'dd/MM/yyyy')}
+                      </Typography>
+                    </Grid>
+                    {service.validityPeriod && (
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Validity:</strong> {service.validityPeriod} months
+                        </Typography>
+                      </Grid>
+                    )}
+                  </Grid>
                 </Stack>
               </CardContent>
             </Card>
@@ -677,8 +840,8 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
 
     return (
       <Timeline>
-        {history.map((event) => (
-          <TimelineItem key={event._id}>
+        {history.map((event, index) => (
+          <TimelineItem key={event._id || event.timestamp || index}>
             <TimelineSeparator>
               <TimelineDot color={getEventColor(event.type)} />
               <TimelineConnector />
@@ -736,6 +899,7 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
       customerType: CUSTOMER_TYPE.INDIVIDUAL,
       companyName: '',
       companyRegNumber: '',
+      representativeName: '', // Contact person for company accounts
       status: 'NEW_FIRST_TIME'
     });
     const [errors, setErrors] = useState({});
@@ -918,12 +1082,14 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
       if (formData.customerType === CUSTOMER_TYPE.INDIVIDUAL) {
         if (!formData.firstName) newErrors.firstName = 'First name is required';
         if (!formData.lastName) newErrors.lastName = 'Last name is required';
+        if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of Birth is required';
       } else {
+        // COMPANY type validation
         if (!formData.companyName) newErrors.companyName = 'Company name is required';
         if (!formData.companyRegNumber) newErrors.companyRegNumber = 'Company registration number is required';
+        // Representative name is optional but recommended for companies
       }
 
-      if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of Birth is required';
       if (!formData.address) newErrors.address = 'Address is required';
       if (!formData.postcode) newErrors.postcode = 'Postal code is required';
 
@@ -1015,6 +1181,21 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
                     error={!!errors.lastName}
                     helperText={errors.lastName}
                   />
+                  {/* Date of Birth - only required for individuals */}
+                  <TextField
+                    fullWidth
+                    label="Date of Birth"
+                    name="dateOfBirth"
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={handleInputChange}
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                    error={!!errors.dateOfBirth}
+                    helperText={errors.dateOfBirth}
+                    placeholder="Date of birth"
+                  />
                 </>
               ) : (
                 // Company customer fields
@@ -1037,24 +1218,19 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
                     error={!!errors.companyRegNumber}
                     helperText={errors.companyRegNumber}
                   />
+                  <TextField
+                    fullWidth
+                    label="Representative Name (Optional)"
+                    name="representativeName"
+                    value={formData.representativeName}
+                    onChange={handleInputChange}
+                    helperText="Contact person for this company account"
+                    placeholder="e.g., John Smith"
+                  />
                 </>
               )}
 
               {/* Common fields for both types */}
-              <TextField
-  fullWidth
-  label="Date of Birth"
-  name="dateOfBirth"
-  type="date"
-  value={formData.dateOfBirth}
-  onChange={handleInputChange}
-  InputLabelProps={{
-    shrink: true,
-  }}
-  error={!!errors.dateOfBirth}
-  helperText={errors.dateOfBirth}
-  placeholder="Date of birth"
-/>
               <TextField
                 fullWidth
                 label="Email"
@@ -1139,6 +1315,329 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
             variant="contained"
           >
             Create Customer
+          </LoadingButton>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
+  // Edit Customer Dialog - same structure as Create but pre-populated
+  const EditCustomerDialog = ({ customer, open, onClose, onCustomerUpdated }) => {
+    const [formData, setFormData] = useState({
+      firstName: customer?.firstName || '',
+      lastName: customer?.lastName || '',
+      dateOfBirth: customer?.dateOfBirth || '',
+      email: customer?.email || '',
+      phoneNumber: customer?.phoneNumber || '',
+      NINumber: customer?.NINumber || '',
+      address: customer?.address || '',
+      postcode: customer?.postcode || '',
+      customerType: customer?.customerType || CUSTOMER_TYPE.INDIVIDUAL,
+      companyName: customer?.companyName || '',
+      companyRegNumber: customer?.companyRegNumber || '',
+    });
+    const [errors, setErrors] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { enqueueSnackbar } = useSnackbar();
+
+    // Reset form data when customer changes
+    useEffect(() => {
+      if (customer) {
+        setFormData({
+          firstName: customer.firstName || '',
+          lastName: customer.lastName || '',
+          dateOfBirth: customer.dateOfBirth || '',
+          email: customer.email || '',
+          phoneNumber: customer.phoneNumber || '',
+          NINumber: customer.NINumber || '',
+          address: customer.address || '',
+          postcode: customer.postcode || '',
+          customerType: customer.customerType || CUSTOMER_TYPE.INDIVIDUAL,
+          companyName: customer.companyName || '',
+          companyRegNumber: customer.companyRegNumber || '',
+        });
+      }
+    }, [customer]);
+
+    const isValidEmail = (email) => {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      return emailRegex.test(email);
+    };
+
+    const isValidUKPhone = (phone) => {
+      const cleanPhone = phone.replace(/\s+/g, '').replace(/[-()+]/g, '');
+      const patterns = [
+        /^(\+447|07)[0-9]{9}$/,
+        /^01[0-9]{8,9}$/,
+        /^02[0-9]{9}$/,
+        /^03[0-9]{9}$/,
+        /^08(00|08|44|45|70|43)[0-9]{7}$/,
+      ];
+      return patterns.some(pattern => pattern.test(cleanPhone));
+    };
+
+    const isValidNINumber = (ni) => {
+      const cleanNI = ni.replace(/\s+/g, '').toUpperCase();
+      const niRegex = /^[A-Z]{2}[0-9]{6}[A-Z]$/;
+      return niRegex.test(cleanNI);
+    };
+
+    const handleInputChange = (e) => {
+      const { name, value } = e.target;
+      setFormData(prev => ({ ...prev, [name]: value }));
+      if (errors[name]) {
+        setErrors(prev => ({ ...prev, [name]: '' }));
+      }
+    };
+
+    const validateForm = () => {
+      const newErrors = {};
+      if (!formData.email || !isValidEmail(formData.email)) {
+        newErrors.email = 'Please enter a valid email address';
+      }
+      if (!formData.phoneNumber || !isValidUKPhone(formData.phoneNumber)) {
+        newErrors.phoneNumber = 'Please enter a valid UK phone number';
+      }
+      if (!formData.NINumber || !isValidNINumber(formData.NINumber)) {
+        newErrors.NINumber = 'Please enter a valid NI number';
+      }
+      if (formData.customerType === CUSTOMER_TYPE.INDIVIDUAL) {
+        if (!formData.firstName) newErrors.firstName = 'First name is required';
+        if (!formData.lastName) newErrors.lastName = 'Last name is required';
+      } else {
+        if (!formData.companyName) newErrors.companyName = 'Company name is required';
+      }
+      if (!formData.address) newErrors.address = 'Address is required';
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (!validateForm()) return;
+
+      setIsSubmitting(true);
+      try {
+        const response = await salesService.updateCustomer(customer._id, formData);
+        enqueueSnackbar('Customer updated successfully', { variant: 'success' });
+        onCustomerUpdated(response);
+        onClose();
+      } catch (error) {
+        console.error('Customer update error:', error);
+        enqueueSnackbar(
+          error.response?.data?.message || 'Failed to update customer',
+          { variant: 'error' }
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">Edit Customer</Typography>
+            <IconButton onClick={onClose}>
+              <CloseIcon />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+            <Stack spacing={3}>
+              <FormControl fullWidth>
+                <InputLabel>Customer Type</InputLabel>
+                <Select
+                  name="customerType"
+                  value={formData.customerType}
+                  onChange={handleInputChange}
+                  label="Customer Type"
+                >
+                  <MenuItem value={CUSTOMER_TYPE.INDIVIDUAL}>Individual</MenuItem>
+                  <MenuItem value={CUSTOMER_TYPE.COMPANY}>Company</MenuItem>
+                </Select>
+              </FormControl>
+
+              {formData.customerType === CUSTOMER_TYPE.INDIVIDUAL ? (
+                <>
+                  <TextField
+                    fullWidth
+                    label="First Name"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
+                    error={!!errors.firstName}
+                    helperText={errors.firstName}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Last Name"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    error={!!errors.lastName}
+                    helperText={errors.lastName}
+                  />
+                </>
+              ) : (
+                <>
+                  <TextField
+                    fullWidth
+                    label="Company Name"
+                    name="companyName"
+                    value={formData.companyName}
+                    onChange={handleInputChange}
+                    error={!!errors.companyName}
+                    helperText={errors.companyName}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Company Registration Number"
+                    name="companyRegNumber"
+                    value={formData.companyRegNumber}
+                    onChange={handleInputChange}
+                  />
+                </>
+              )}
+
+              <TextField
+                fullWidth
+                label="Date of Birth"
+                name="dateOfBirth"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={handleInputChange}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                fullWidth
+                label="Email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                error={!!errors.email}
+                helperText={errors.email}
+              />
+              <TextField
+                fullWidth
+                label="Phone Number"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                error={!!errors.phoneNumber}
+                helperText={errors.phoneNumber}
+              />
+              <TextField
+                fullWidth
+                label="National Insurance Number"
+                name="NINumber"
+                value={formData.NINumber}
+                onChange={handleInputChange}
+                error={!!errors.NINumber}
+                helperText={errors.NINumber}
+              />
+              <TextField
+                fullWidth
+                label="Postal Code"
+                name="postcode"
+                value={formData.postcode}
+                onChange={handleInputChange}
+              />
+              <TextField
+                fullWidth
+                label="Address"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                error={!!errors.address}
+                helperText={errors.address}
+                multiline
+                rows={2}
+              />
+            </Stack>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cancel</Button>
+          <LoadingButton
+            loading={isSubmitting}
+            onClick={handleSubmit}
+            variant="contained"
+          >
+            Update Customer
+          </LoadingButton>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
+  // Delete Confirmation Dialog
+  const DeleteCustomerDialog = ({ customer, open, onClose, onCustomerDeleted }) => {
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteReason, setDeleteReason] = useState('');
+    const { enqueueSnackbar } = useSnackbar();
+
+    const handleDelete = async () => {
+      setIsDeleting(true);
+      try {
+        await salesService.deleteCustomer(customer._id);
+        enqueueSnackbar('Customer deleted successfully', { variant: 'success' });
+        onCustomerDeleted(customer._id);
+        onClose();
+      } catch (error) {
+        console.error('Customer delete error:', error);
+        enqueueSnackbar(
+          error.response?.data?.message || 'Failed to delete customer',
+          { variant: 'error' }
+        );
+      } finally {
+        setIsDeleting(false);
+      }
+    };
+
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <DeleteIcon color="error" />
+            <Typography variant="h6">Confirm Delete</Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2}>
+            <Typography>
+              Are you sure you want to delete{' '}
+              <strong>
+                {customer?.customerType === CUSTOMER_TYPE.COMPANY
+                  ? customer?.companyName
+                  : `${customer?.firstName} ${customer?.lastName}`}
+              </strong>
+              ?
+            </Typography>
+            <Typography variant="body2" color="error">
+              This action cannot be undone. All customer data will be permanently removed.
+            </Typography>
+            <TextField
+              fullWidth
+              label="Reason for deletion (optional)"
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              multiline
+              rows={3}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cancel</Button>
+          <LoadingButton
+            loading={isDeleting}
+            onClick={handleDelete}
+            variant="contained"
+            color="error"
+          >
+            Delete Customer
           </LoadingButton>
         </DialogActions>
       </Dialog>
@@ -1350,6 +1849,29 @@ function CustomerManagement({ onCustomerSelect, onCustomerConfirmed }) {
           enqueueSnackbar('Customer created successfully', { variant: 'success' });
         }}
       />
+      
+      {/* Edit Customer Dialog */}
+      {editingCustomer && (
+        <EditCustomerDialog
+          customer={editingCustomer}
+          open={isEditDialogOpen}
+          onClose={() => {
+            setIsEditDialogOpen(false);
+            setEditingCustomer(null);
+          }}
+          onCustomerUpdated={handleCustomerUpdated}
+        />
+      )}
+      
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmDialog.customer && (
+        <DeleteCustomerDialog
+          customer={deleteConfirmDialog.customer}
+          open={deleteConfirmDialog.open}
+          onClose={() => setDeleteConfirmDialog({ open: false, customer: null })}
+          onCustomerDeleted={handleCustomerDeleted}
+        />
+      )}
     </Box>
   );
 }

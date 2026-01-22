@@ -5,7 +5,8 @@ const tradeServiceAssociationSchema = new mongoose.Schema({
   trade: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'trades',
-    required: [true, "Trade ID is required"]
+    required: [true, "Trade ID is required"],
+    unique: true  // Ensure only one association per trade
   },
   cards: [{
     type: mongoose.Schema.Types.ObjectId,

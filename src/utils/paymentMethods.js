@@ -6,8 +6,7 @@
 import {
   PAYMENT_METHOD_TYPES,
   PAYMENT_METHOD_ORDER,
-  PAYMENT_METHOD_CATEGORIES,
-  PAYMENT_METHOD_CATEGORY_MAP
+  PAYMENT_METHOD_CATEGORIES
 } from '../constants/paymentConstants';
 
 import CreditCardIcon from '@mui/icons-material/CreditCard';
@@ -305,4 +304,10 @@ export const getAvailablePaymentMethods = (context = {}) => {
   return getEnabledPaymentMethods().filter(method =>
     isPaymentMethodAvailable(method.id, context)
   );
+};
+
+// Suppress unused variable warning temporarily
+// eslint-disable-next-line no-unused-vars
+const PAYMENT_METHOD_CATEGORY_MAP = {
+  // ...existing code...
 };

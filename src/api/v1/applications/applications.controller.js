@@ -4,7 +4,7 @@ const {
 } = require("../../../common/services/auth.service");
 const ApplicationsService = require("./applications.service");
 
-const router = express();
+const router = express.Router();
 
 router
   .route("/")

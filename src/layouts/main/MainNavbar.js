@@ -111,7 +111,7 @@ export default function MainNavbar() {
   const [prevScrollPos, setPrevScrollPos] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0); // New state for smooth transitions
 
-  // Throttle function to prevent excessive function calls
+  // Simplified throttle function
   const throttle = (func, delay) => {
     let inProgress = false;
     return (...args) => {
@@ -137,27 +137,26 @@ export default function MainNavbar() {
 
     resizeObserver.observe(navbarElement);
 
-    // Throttled scroll handler with enhanced scroll effects
+    // Simplified scroll handler - single smooth transition
     const handleScroll = throttle(() => {
       const currentScrollPos = window.pageYOffset;
 
-      // Calculate scroll progress for smooth background transition (0 to 1)
-      // Complete transition by 60px of scrolling
-      const progress = Math.min(currentScrollPos / 60, 1);
+      // Single smooth progress calculation (0 to 1 over 100px for smoother feel)
+      const progress = Math.min(currentScrollPos / 100, 1);
       setScrollProgress(progress);
 
-      // Calculate visibility with hysteresis to prevent flickering
+      // Simplified visibility toggle - less aggressive
       const scrollingDown = currentScrollPos > prevScrollPos;
       const scrollAmount = Math.abs(currentScrollPos - prevScrollPos);
 
-      if (scrollingDown && scrollAmount > 20 && currentScrollPos > 300) {
+      if (scrollingDown && scrollAmount > 30 && currentScrollPos > 400) {
         setVisible(false);
-      } else if (!scrollingDown && scrollAmount > 5) {
+      } else if (!scrollingDown && scrollAmount > 10) {
         setVisible(true);
       }
 
       setPrevScrollPos(currentScrollPos);
-    }, 30); // Slightly faster throttle for smoother transitions
+    }, 50); // Slower throttle for smoother animation
 
     window.addEventListener('scroll', handleScroll);
 
@@ -212,15 +211,15 @@ export default function MainNavbar() {
         ref={navbarRef}
         sx={{
           boxShadow: 'none',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.4s ease, background-color 0.4s ease',
           transform: visible ? 'translateY(0)' : 'translateY(-100%)',
-          backdropFilter: scrollProgress > 0 ? `blur(${Math.min(8 * scrollProgress, 8)}px)` : 'none',
-          WebkitBackdropFilter: scrollProgress > 0 ? `blur(${Math.min(8 * scrollProgress, 8)}px)` : 'none',
+          backdropFilter: scrollProgress > 0 ? `blur(${Math.round(6 * scrollProgress)}px)` : 'none',
+          WebkitBackdropFilter: scrollProgress > 0 ? `blur(${Math.round(6 * scrollProgress)}px)` : 'none',
           background: getNavbarBackgroundStyles(),
-          borderBottom: scrollProgress > 0.3
+          borderBottom: scrollProgress > 0.5
             ? `1px solid ${theme.palette.mode === 'light'
-              ? alpha('rgb(230, 230, 230)', scrollProgress * 0.8)
-              : alpha('rgb(45, 45, 45)', scrollProgress * 0.6)}`
+              ? alpha('rgb(230, 230, 230)', 0.6)
+              : alpha('rgb(45, 45, 45)', 0.5)}`
             : 'none',
           // More subtle gradient for home page that fades completely
           ...(isHome && scrollProgress === 0 && {
@@ -240,11 +239,6 @@ export default function MainNavbar() {
       >
         <ToolbarStyle
           disableGutters
-          sx={{
-            ...(scrollProgress > 0.5 && {
-              height: { md: APP_BAR_DESKTOP - 6 * scrollProgress },
-            }),
-          }}
         >
           <Container
             maxWidth="lg"
@@ -274,7 +268,7 @@ export default function MainNavbar() {
             <Box sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: { xs: 1, sm: 1.5 }
+              gap: { xs: 1.5, sm: 2, md: 2 }
             }}>
               {/* Phone button as an icon only */}
               <PhoneButton

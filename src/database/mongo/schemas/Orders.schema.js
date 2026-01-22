@@ -82,6 +82,25 @@ const itemsSchema = mongoose.Schema({
     verificationDocuments: [{ type: String }]
   },
   
+  // ===== GROUP BOOKING: Recipient Fields =====
+  // For group bookings, each item can have a different recipient
+  // If not set, falls back to the order's primary customer
+  recipientId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Customer',
+    default: null // null means use order's customerId
+  },
+  recipientDetails: {
+    firstName: { type: String },
+    lastName: { type: String },
+    dateOfBirth: { type: Date },
+    email: { type: String },
+    phoneNumber: { type: String },
+    NINumber: { type: String },
+    address: { type: String },
+    postcode: { type: String }
+  },
+
   // Service Lifecycle Fields
   serviceHistory: [{
     status: { type: String },
@@ -103,6 +122,33 @@ const ordersSchema = mongoose.Schema({
     required: true,
     default: 'ONLINE'
   },
+
+  // ===== GROUP BOOKING FIELDS =====
+  isGroupBooking: { 
+    type: Boolean, 
+    default: false 
+  },
+  
+  // Organization placing the group booking (company/employer)
+  organizationName: { type: String },
+  
+  // Booking contact - person handling the booking (may differ from service recipients)
+  bookingContact: {
+    name: { type: String },
+    email: { type: String },
+    phone: { type: String },
+    role: { type: String } // e.g., "HR Manager", "Site Supervisor", "Training Coordinator"
+  },
+  
+  // Array of all recipient customer IDs for quick lookup
+  // Individual recipient details are stored per-item in items[].recipientId
+  recipientIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Customer'
+  }],
+  
+  // Group booking notes (special instructions, company requirements, etc.)
+  groupBookingNotes: { type: String },
 
   // Add reference fields for hierarchical reference system
   orderReference: {
@@ -169,6 +215,117 @@ const ordersSchema = mongoose.Schema({
 
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+});
+
+// ===== AUTOMATIC CUSTOMER STATUS TRANSITIONS =====
+// These hooks automatically update customer status based on order lifecycle
+
+// Hook 1: NEW_FIRST_TIME → NEW_PROSPECT (when first order created, even if unpaid)
+ordersSchema.post('save', async function() {
+  try {
+    if (this.isNew && this.customerId) {
+      const Customer = require('../models/customer.model');
+      const customer = await Customer.findById(this.customerId);
+      
+      if (customer && customer.status === 'NEW_FIRST_TIME') {
+        await customer.updateOne({
+          status: 'NEW_PROSPECT',
+          $push: {
+            statusHistory: {
+              previousStatus: 'NEW_FIRST_TIME',
+              newStatus: 'NEW_PROSPECT',
+              reason: 'First order created',
+              orderId: this._id,
+              automatic: true,
+              timestamp: new Date()
+            }
+          }
+        });
+        console.log(`[Customer Status] ${customer._id}: NEW_FIRST_TIME → NEW_PROSPECT (Order ${this._id} created)`);
+      }
+    }
+  } catch (error) {
+    console.error('[Customer Status Hook] Error in NEW_FIRST_TIME → NEW_PROSPECT:', error);
+  }
+});
+
+// Hook 2: NEW_PROSPECT → EXISTING_ACTIVE (when order payment completed)
+// Also handles: EXISTING_COMPLETED → EXISTING_ACTIVE (reactivation on new paid order)
+ordersSchema.post('save', async function() {
+  try {
+    // Check if order is paid: paymentStatus = 2 (paid) AND orderCheckPoint = 4 (paid)
+    if (this.paymentStatus === 2 && this.orderCheckPoint === 4 && this.customerId) {
+      const Customer = require('../models/customer.model');
+      const customer = await Customer.findById(this.customerId);
+      
+      if (customer && ['NEW_FIRST_TIME', 'NEW_PROSPECT', 'EXISTING_COMPLETED'].includes(customer.status)) {
+        const previousStatus = customer.status;
+        const reason = previousStatus === 'EXISTING_COMPLETED' 
+          ? 'New paid order (customer reactivated)' 
+          : 'First paid order completed';
+        
+        await customer.updateOne({
+          status: 'EXISTING_ACTIVE',
+          $push: {
+            statusHistory: {
+              previousStatus: previousStatus,
+              newStatus: 'EXISTING_ACTIVE',
+              reason: reason,
+              orderId: this._id,
+              automatic: true,
+              timestamp: new Date()
+            }
+          }
+        });
+        console.log(`[Customer Status] ${customer._id}: ${previousStatus} → EXISTING_ACTIVE (Order ${this._id} paid)`);
+      }
+    }
+  } catch (error) {
+    console.error('[Customer Status Hook] Error in payment completion transition:', error);
+  }
+});
+
+// Hook 3: EXISTING_ACTIVE → EXISTING_COMPLETED (when ALL orders completed)
+ordersSchema.post('findOneAndUpdate', async function(doc) {
+  try {
+    if (doc && doc.customerId) {
+      // Check if this order is now marked as completed
+      // orderCheckPoint values: 0=Cart, 2=Checkout, 3=Pending, 4=Paid, 5=Cancelled, 6=Tried
+      // We consider an order "completed" when it's fully processed (checkpoint 4)
+      const Orders = mongoose.model('orders');
+      const Customer = require('../models/customer.model');
+      
+      // Count incomplete/active orders (not completed and not cancelled)
+      const activeOrders = await Orders.countDocuments({
+        customerId: doc.customerId,
+        orderCheckPoint: { $nin: [4, 5] } // Not paid/completed (4) or cancelled (5)
+      });
+      
+      // If no active orders remain, mark customer as completed
+      if (activeOrders === 0) {
+        const customer = await Customer.findById(doc.customerId);
+        
+        if (customer && customer.status === 'EXISTING_ACTIVE') {
+          await customer.updateOne({
+            status: 'EXISTING_COMPLETED',
+            $push: {
+              statusHistory: {
+                previousStatus: 'EXISTING_ACTIVE',
+                newStatus: 'EXISTING_COMPLETED',
+                reason: 'All orders completed',
+                orderId: doc._id,
+                automatic: true,
+                timestamp: new Date()
+              }
+            }
+          });
+          console.log(`[Customer Status] ${customer._id}: EXISTING_ACTIVE → EXISTING_COMPLETED (All orders fulfilled)`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Customer Status Hook] Error in EXISTING_ACTIVE → EXISTING_COMPLETED:', error);
+  }
 });
 
 const Orders = mongoose.model("orders", ordersSchema);

@@ -1,6 +1,7 @@
 const express = require("express");
 const userService = require("./user.service");
 const uploadFileService = require("../../../common/services/upload-file.service");
+const fileUpload = require('express-fileupload');
 const {
   sendVerificationCodeViaEmail,
   verifyCodeSentViaEmail,
@@ -63,7 +64,7 @@ router
  */
 router
   .route("/upload-media")
-  .post(extractTokenDetails, uploadFileService.uploadFile);
+  .post(fileUpload(), extractTokenDetails, uploadFileService.uploadFile);
 
 // change role aka Account Type of a user
 router
@@ -79,6 +80,15 @@ router
 router
   .route("/notification-preferences")
   .put(extractTokenDetails, userService.updateNotificationPreferences);
+
+/**
+ * Change user password
+ * @param {userId, currentPassword, newPassword} req.body
+ * @returns {Object} Success message
+ */
+router
+  .route("/change-password")
+  .put(extractTokenDetails, userService.changePassword);
 
 /**
  * API to send OTP via simple Message

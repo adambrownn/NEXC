@@ -31,6 +31,9 @@ const createUser = async (userReqObj) => {
   newUser.name = userReqObj.name;
   newUser.phoneNumber = userReqObj.phoneNumber;
   newUser.accountType = userReqObj.accountType || "user";
+  newUser.role = userReqObj.role || userReqObj.accountType || "user"; // Add role field
+  newUser.isEmailVerified = userReqObj.isEmailVerified || false;
+  newUser.status = userReqObj.status || "active";
 
   if (userReqObj.registrationType === "email") {
     newUser.password = await hashPassword(userReqObj.password);
@@ -225,9 +228,88 @@ module.exports.updateNotificationPreferences = async (req, res) => {
     } else {
       throw new Error("Failed to update notification preferences");
     }
-  } catch (err) {
-    console.log(err);
-    res.json({ err: err.message });
+  } catch (error) {
+    console.error('Error updating notification preferences:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update notification preferences'
+    });
+  }
+};
+
+module.exports.changePassword = async (req, res) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+    const tokenUserId = req.user?.userId;
+
+    console.log('Change password request:', { userId, tokenUserId, hasCurrentPassword: !!currentPassword, hasNewPassword: !!newPassword });
+
+    // Verify user is changing their own password (or is admin)
+    if (!userId || (userId !== tokenUserId && req.user?.accountType !== 'admin')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to change password for this user'
+      });
+    }
+
+    // Get user from database WITH password field (getUserDetailsByCriteria excludes it)
+    const User = require('../../../database/mongo/models/User.model');
+    const userData = await User.findById(userId);
+    
+    if (!userData) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    console.log('User found:', { userId: userData._id, hasPassword: !!userData.password, passwordLength: userData.password?.length });
+
+    // Check if user has a password (some users might have social login only)
+    if (!userData.password) {
+      return res.status(400).json({
+        success: false,
+        message: 'This account does not have a password set. Please use social login or reset your password.'
+      });
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, userData.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Ensure new password is different
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password'
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password in database
+    await userRepository.updateUser(
+      { _id: userId },
+      { password: hashedPassword },
+      {}
+    );
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to change password'
+    });
   }
 };
 

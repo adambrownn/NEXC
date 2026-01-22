@@ -13,11 +13,13 @@ export default function TradeServiceAssociations() {
   const [cards, setCards] = useState([]);
   const [tests, setTests] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [qualifications, setQualifications] = useState([]);
   const [associations, setAssociations] = useState([]);
   const [selectedTrade, setSelectedTrade] = useState(null);
   const [selectedCards, setSelectedCards] = useState([]);
   const [selectedTests, setSelectedTests] = useState([]);
   const [selectedCourses, setSelectedCourses] = useState([]);
+  const [selectedQualifications, setSelectedQualifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
@@ -38,22 +40,25 @@ export default function TradeServiceAssociations() {
       setTrades(tradesData);
 
       // Fetch all services
-      const [cardsResp, testsResp, coursesResp] = await Promise.all([
+      const [cardsResp, testsResp, coursesResp, qualificationsResp] = await Promise.all([
         salesService.getCards(),
         salesService.getTests(),
-        salesService.getCourses()
+        salesService.getCourses(),
+        salesService.getQualifications()
       ]);
       
       console.log('Services responses:', {
         cards: cardsResp,
         tests: testsResp,
-        courses: coursesResp
+        courses: coursesResp,
+        qualifications: qualificationsResp
       });
 
       // Set services data
       if (cardsResp?.success) setCards(cardsResp.data || []);
       if (testsResp?.success) setTests(testsResp.data || []);
       if (coursesResp?.success) setCourses(coursesResp.data || []);
+      if (qualificationsResp?.success) setQualifications(qualificationsResp.data || []);
 
       // Fetch associations after we have trades and services
       console.log('Fetching associations...');
@@ -90,7 +95,8 @@ export default function TradeServiceAssociations() {
         trade: selectedTrade._id,
         cards: selectedCards.map(card => card._id),
         tests: selectedTests.map(test => test._id),
-        courses: selectedCourses.map(course => course._id)
+        courses: selectedCourses.map(course => course._id),
+        qualifications: selectedQualifications.map(qual => qual._id)
       };
 
       console.log('Creating association with data:', associationData);
@@ -127,6 +133,7 @@ export default function TradeServiceAssociations() {
     setSelectedCards([]);
     setSelectedTests([]);
     setSelectedCourses([]);
+    setSelectedQualifications([]);
   };
 
   const showSnackbar = (message, severity) => {
@@ -263,6 +270,36 @@ export default function TradeServiceAssociations() {
               />
             )}
           />
+
+          <Autocomplete
+            multiple
+            value={selectedQualifications}
+            onChange={(event, newValue) => {
+              setSelectedQualifications(newValue);
+            }}
+            options={qualifications}
+            getOptionLabel={(option) => option?.title || ''}
+            isOptionEqualToValue={isOptionEqualToValue}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  key={option._id}
+                  label={option.title}
+                  {...getTagProps({ index })}
+                />
+              ))
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Select Qualifications (Auto-synced)"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                helperText="Qualifications are automatically linked when created/edited"
+              />
+            )}
+          />
         </div>
 
         <Button
@@ -284,6 +321,7 @@ export default function TradeServiceAssociations() {
               <TableCell>Cards</TableCell>
               <TableCell>Tests</TableCell>
               <TableCell>Courses</TableCell>
+              <TableCell>Qualifications</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -309,6 +347,11 @@ export default function TradeServiceAssociations() {
                     courses.find(c => c._id === (typeof courseId === 'string' ? courseId : courseId._id))?.title
                   ).filter(Boolean).join(', ')}
                 </TableCell>
+                <TableCell>
+                  {(association.qualifications || []).map(qualId => 
+                    qualifications.find(q => q._id === (typeof qualId === 'string' ? qualId : qualId._id))?.title
+                  ).filter(Boolean).join(', ') || <em style={{color: '#888'}}>Auto-synced</em>}
+                </TableCell>
                 <TableCell align="right">
                   <IconButton
                     onClick={() => handleDeleteAssociation(association._id)}
@@ -322,7 +365,7 @@ export default function TradeServiceAssociations() {
             ))}
             {!associations.length && (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   No associations found
                 </TableCell>
               </TableRow>

@@ -1,28 +1,20 @@
-const express = require("express");
-const router = express();
+const express = require('express');
+const router = express.Router();
+const authService = require('./auth.service');
 
-const authService = require("./auth.service");
+// Auth routes
+router.post('/login', authService.authenticateUser);
+router.post('/reset-password', authService.resetPassword);
+router.post('/refresh-token', authService.generateTokenFromRefreshToken);
+router.post('/check-admin', authService.checkIsAdmin);
 
-/**
- *
- * @param {loginType, email, password, phoneNumber, token, deviceToken} req
- * @param {user, accessToken, refreshToken} res
- * @returns
- */
-router
-  .route("/login")
-  // user login
-  .post(authService.authenticateUser);
+// Admin management routes
+router.post('/create-admin', authService.createAdminUser);
+router.post('/sync-users', authService.syncMongoUsers);
 
-router
-  .route("/generate-new-token")
-  .post(authService.generateTokenFromRefreshToken);
-
-router.route("/reset-password").post(authService.resetPassword);
-
-/**
- * check if a user is admin
- */
-router.route("/is-admin").post(authService.checkIsAdmin);
+// Debug route (development only)
+if (process.env.NODE_ENV !== 'production') {
+  router.get('/debug-users', authService.debugUsers);
+}
 
 module.exports = router;

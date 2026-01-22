@@ -4,7 +4,7 @@ const {
   getS3Path,
 } = require("./utility.service");
 const { v4: uuidv4 } = require("uuid");
-const { uploadFileToS3 } = require("./s3-storage.service");
+const { uploadFileToS3 } = require("./archive/s3-storage.service");
 
 /**
  *

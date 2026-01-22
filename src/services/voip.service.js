@@ -1,678 +1,753 @@
-import JsSIP from 'jssip';
 import EventEmitter from 'events';
+import { Device } from '@twilio/voice-sdk';
+import { io } from 'socket.io-client';
+
+import axiosInstance from '../axiosConfig';
 
 class VoIPService extends EventEmitter {
   constructor() {
     super();
-    this.ua = null;
-    this.session = null;
+    this.device = null;
+    this.connection = null;
+    this.incomingConnection = null;
     this.callHistory = [];
     this.isRegistered = false;
-    this.remoteAudio = new Audio();
-    this.localStream = null;
-    this.freeswitchServer = 'sip.nexc.co.uk'; // SIP domain
-    this.wsServer = 'sip.nexc.co.uk:7443';    // WebSocket server (add this line)
-    this.incomingSession = null;
     this._initializing = false;
+    this._isInitialized = false;
+    this._identity = null;
+    this._callerId = null;
+    this._agentPingTimer = null;
+    this.lastActiveCall = null;
+    this._lastActiveCallKey = 'voip_activeCall';
+    this.socket = null; // Socket.IO connection for real-time events
+    this._inboundEnabled = true;
   }
 
-  async initialize(config) {
+  async initialize(_config) {
+    if (this._isInitialized && this.device) {
+      console.log('[VoIP Service] Already initialized, skipping');
+      return true;
+    }
+
+    if (this._initializing) return false;
+    this._initializing = true;
+
     try {
-      // Use a lock to prevent multiple simultaneous initializations
-      if (this._initializing) {
-        console.log('VoIP service is already initializing, please wait...');
-        return new Promise((resolve) => {
-          const checkInterval = setInterval(() => {
-            if (!this._initializing) {
-              clearInterval(checkInterval);
-              resolve(true);
-            }
-          }, 100);
-        });
+      console.log('[VoIP Service] Starting initialization...');
+      
+      // Fetch an access token from our backend (must be authenticated)
+      console.log('[VoIP Service] Requesting Twilio token from backend...');
+      const tokenResp = await axiosInstance.post('/voice/token', {});
+      const { token, identity, callerId } = tokenResp.data || {};
+
+      if (!token) {
+        throw new Error('Twilio token missing from server response');
       }
 
-      this._initializing = true;
+      console.log('[VoIP Service] ✅ Token received');
+      console.log('[VoIP Service] Identity:', identity);
+      console.log('[VoIP Service] Caller ID:', callerId);
 
-      // Call this at the beginning of initialize method (right after this._initializing = true;)
-      await this.testDnsResolution();
+      this._identity = identity || null;
+      this._callerId = callerId || null;
 
-      // Check if we need to reinitialize
-      if (this.ua &&
-        this.freeswitchServer === (config?.domain || this.freeswitchServer)) {
-        console.log('VoIP service already initialized with the same server');
-        this._initializing = false;
-        return true;
+      // Tear down existing device if re-initializing
+      if (this.device) {
+        try {
+          this.device.destroy();
+          console.log('[VoIP Service] Previous device destroyed');
+        } catch (e) {
+          // ignore
+        }
+        this.device = null;
       }
 
-      // Add clear debug logging to identify config issues
-      console.log('VoIP initialization config:', {
-        providedDomain: config?.domain,
-        providedWsServer: config?.wsServer,
-        currentWsServer: this.wsServer
+      console.log('[VoIP Service] Creating new Twilio Device...');
+      this.device = new Device(token, {
+        // Keep defaults; audio permission is handled by the UI already
+        // Close protection: don't assume any audio device routing yet
+        closeProtection: true
       });
 
-      // Update server configuration if provided
-      if (config?.domain) {
-        this.freeswitchServer = config.domain;
-      }
+      this._wireDeviceEvents(this.device);
 
-      // Ensure consistent domain usage
-      if (config?.domain) {
-        this.freeswitchServer = config.domain;
+      console.log('[VoIP Service] Registering device with Twilio...');
+      await this.device.register();
+      console.log('[VoIP Service] ✅ Device registered successfully');
+      this.isRegistered = true;
 
-        // Important: Always ensure domain values match
-        if (this.freeswitchServer !== 'sip.nexc.co.uk') {
-          console.warn('Using non-standard domain. Consider using sip.nexc.co.uk for best compatibility.');
-        }
-      }
+      this._isInitialized = true;
 
-      // Ensure wsServer always uses the same domain as freeswitchServer
-      this.wsServer = config?.wsServer || `${this.freeswitchServer}:7443`;
+      // Initialize Socket.IO connection for real-time events
+      this._initializeSocket();
 
-      // IMPORTANT FIX: Always ensure wsServer uses the hostname
-      this.wsServer = config?.wsServer || this.wsServer;
+      // CRITICAL FIX: Don't start empty heartbeat!
+      // voipService should NOT be responsible for agent pings.
+      // CallManagement handles status pings every 60 seconds (sufficient for 120s TTL).
+      // Empty pings from voipService were resetting status to 'available' every 30s.
+      // Removed:
+      //   if (this._agentPingTimer) clearInterval(this._agentPingTimer);
+      //   this._agentPingTimer = setInterval(() => { empty body }, 30_000);
+      // Let CallManagement be the sole source of agent status updates.
 
-      // If wsServer contains an IP address (like 18.134.88.224), replace it with hostname
-      if (this.wsServer.includes('18.134.88.224')) {
-        console.log('Replacing IP address in WebSocket server with hostname');
-        this.wsServer = this.wsServer.replace('18.134.88.224', 'sip.nexc.co.uk');
-      }
-
-      console.log('Final WebSocket server:', this.wsServer);
-
-      // Cleanup existing connection if any
-      if (this.ua) {
-        console.log('Cleaning up existing user agent before creating a new one');
-        this.ua.stop();
-        this.ua = null;
-      }
-
-      // Add console message to help users with certificate issues
-      console.warn(
-        "If you're seeing WebSocket connection errors, please visit " +
-        `https://${this.wsServer.split(':')[0]}:7443 directly in your browser and accept the certificate first.`
-      );
-
-      // Configure JsSIP - Use wsServer instead of freeswitchServer for WebSocket
-      JsSIP.debug.enable('JsSIP:*'); // Enable logging for debugging
-
-      // Build the WebSocket URL with proper hostname
-      let wsUrl;
-      if (this.wsServer.includes(':')) {
-        // If port is specified in wsServer
-        const [host, port] = this.wsServer.split(':');
-        wsUrl = `wss://${host}:${port}`;
-      } else {
-        // Default to port 7443 if not specified
-        wsUrl = `wss://${this.wsServer}:7443`;
-      }
-
-      console.log(`Connecting WebSocket to: ${wsUrl}`);
-      const socket = new JsSIP.WebSocketInterface(wsUrl);
-
-      const jsipConfig = {
-        sockets: [socket],
-        // CHANGE THIS LINE:
-        uri: `sip:${this.freeswitchServer === 'sip.nexc.co.uk' ? '1000@sip.nexc.co.uk' : `1000@${this.freeswitchServer}`}`,
-        display_name: 'NEXC User',
-        register: true,
-        password: '1000',
-        register_expires: 300,
-
-        // Add this line to specify the registration server explicitly
-        registrar_server: `sip:${this.freeswitchServer}`,
-
-        // Rest of configuration remains the same
-        connection_recovery_min_interval: 2,
-        connection_recovery_max_interval: 30,
-        session_timers: true,
-        session_timers_refresh_method: "UPDATE",
-        session_timers_expires: 120,
-        no_answer_timeout: 60
-      };
-
-      // Create JsSIP User Agent
-      this.ua = new JsSIP.UA(jsipConfig);
-
-      // Set up event handlers
-      this.setupUAEventHandlers();
-
-      // Start the user agent
-      this.ua.start();
-      console.log('JsSIP user agent started successfully');
-
-      this._initializing = false;
+      console.log('[VoIP Service] ✅ Initialization complete');
       return true;
     } catch (error) {
+      this.isRegistered = false;
+      this._isInitialized = false;
+      this.emit('registrationStateChanged', false);
+      const safeError =
+        error instanceof Error
+          ? error
+          : new Error(typeof error === 'string' ? error : 'VoIP initialization failed');
+      console.error('[VoIP Service] ❌ Initialization failed:', safeError.message);
+      throw safeError;
+    } finally {
       this._initializing = false;
-      console.error('Failed to initialize VoIP service:', error);
-      throw error;
     }
   }
 
-  async testDnsResolution() {
-    console.log('Testing DNS resolution for sip.nexc.co.uk...');
+  /**
+   * Initialize Socket.IO connection for real-time call events
+   * Layered on top of existing EventEmitter for backend integration
+   */
+  _initializeSocket() {
+    // Avoid multiple socket connections
+    if (this.socket?.connected) {
+      return;
+    }
 
-    // Test using fetch API (handles browser security context)
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
+    // Get Socket.IO URL
+    const socketUrl = process.env.REACT_APP_API_BASE_URL || 'https://localhost:3000';
+    
+    // Get token from localStorage and parse it (it's stored as JSON string)
+    let token = localStorage.getItem('accessToken');
+    if (token) {
       try {
-        await fetch('https://sip.nexc.co.uk:7443', {
-          method: 'HEAD',
-          mode: 'no-cors',
-          signal: controller.signal
-        });
-        console.log('DNS resolution successful!');
-      } catch (err) {
-        if (err.name === 'AbortError') {
-          console.log('DNS resolution timed out - likely working but endpoint not responding');
-        } else if (err.name === 'TypeError') {
-          console.error('DNS resolution failed - hostname cannot be resolved');
-          console.log('Please add to hosts file: 18.134.88.224 sip.nexc.co.uk');
+        // Token is stored as JSON string, need to parse it
+        token = JSON.parse(token);
+      } catch (e) {
+        console.warn('[VoIP Service] Token not JSON, using as-is:', e.message);
+      }
+    }
+
+    console.log('[VoIP Service] Initializing Socket.IO connection...');
+    console.log('[VoIP Service] Token (first 20 chars):', token?.substring(0, 20) + '...');
+
+    // Create Socket.IO connection
+    this.socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      secure: true,
+      rejectUnauthorized: process.env.NODE_ENV === 'production',
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      auth: { token }
+    });
+
+    // Connection event handlers
+    this.socket.on('connect', () => {
+      console.log('[VoIP Service] Socket.IO connected');
+      console.log('[VoIP Service] Socket ID:', this.socket.id);
+      this.emit('socketConnected'); // Emit for UI tracking
+      
+      // Join user's personal room for call notifications
+      if (this._identity) {
+        const userId = this._identity.replace('user_', '');
+        console.log('[VoIP Service] Joining user room:', userId);
+        this.socket.emit('join_user_room', { userId });
+      }
+      
+      // Join voice monitoring room (if admin/supervisor)
+      console.log('[VoIP Service] Requesting to join voice_monitoring room...');
+      this.socket.emit('join_voice_monitoring');
+      
+      // Log to verify we're listening for events
+      console.log('[VoIP Service] Listening for: call_activity, recording_available, call_status_update');
+    });
+
+    this.socket.on('disconnect', (reason) => {
+      console.log('[VoIP Service] Socket.IO disconnected:', reason);
+      this.emit('socketDisconnected'); // Emit for UI tracking
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('[VoIP Service] Socket.IO connection error:', error.message);
+    });
+    
+    // Listen for voice_monitoring room join acknowledgement
+    this.socket.on('voice_monitoring_joined', (data) => {
+      if (data.success) {
+        console.log('✅ [VoIP Service] Joined voice_monitoring room successfully');
+        console.log('[VoIP Service] Room has', data.roomMembers, 'member(s)');
+      } else {
+        console.warn('❌ [VoIP Service] Failed to join voice_monitoring:', data.reason);
+        console.warn('[VoIP Service] Your role:', data.role);
+      }
+    });
+
+    // Listen for real-time call status updates from backend
+    this.socket.on('call_status_update', (data) => {
+      console.log('[VoIP Service] Call status update received:', data);
+      
+      // Show browser notification for incoming calls
+      if (data.status === 'ringing' && data.direction === 'inbound') {
+        this._showBrowserNotification(data);
+      }
+      
+      // Emit as EventEmitter for local UI (keeps existing behavior)
+      this.emit('callStatusChanged', {
+        callSid: data.callSid,
+        status: data.status,
+        from: data.from,
+        to: data.to,
+        direction: data.direction,
+        timestamp: data.timestamp
+      });
+    });
+
+    // Listen for general call activity (for monitoring/analytics)
+    this.socket.on('call_activity', (data) => {
+      console.log('[VoIP Service] Call activity:', data);
+      
+      // Emit for dashboard monitoring features
+      this.emit('callActivity', data);
+    });
+    
+    // Listen for recording availability
+    this.socket.on('recording_available', (data) => {
+      console.log('[VoIP Service] Recording available:', data);
+      
+      // Emit for dashboard to update UI
+      this.emit('recordingAvailable', data);
+    });
+
+    // Listen for dequeued call notifications from hold loop
+    this.socket.on('incoming_call_notification', (data) => {
+      console.log('[VoIP Service] 📞 Dequeued call notification received:', data);
+      
+      // Simulate incoming call event for UI
+      const call = {
+        id: Date.now().toString(),
+        number: data.From || 'Unknown',
+        direction: 'incoming',
+        status: 'ringing',
+        timestamp: new Date(),
+        callSid: data.CallSid,
+        isDequeued: true
+      };
+      
+      this.callHistory.unshift(call);
+      console.log('[VoIP Service] ✅ Emitting incomingCall event for dequeued call');
+      this.emit('incomingCall', { ...call });
+    });
+  }
+
+  async setInboundAvailability(enabled) {
+    console.log(`[VoIP Service] setInboundAvailability called: ${enabled}`);
+    this._inboundEnabled = !!enabled;
+
+    if (!this.device) {
+      console.warn('[VoIP Service] Device not initialized, cannot change inbound availability');
+      return;
+    }
+
+    try {
+      if (enabled) {
+        console.log('[VoIP Service] Registering device for inbound calls...');
+        // Check if device is already registered
+        if (!this.isRegistered) {
+          await this.device.register();
+          this.isRegistered = true;
+          console.log('✅ [VoIP Service] Device registered - ready to receive calls');
         } else {
-          console.log('DNS fetch test:', err.message);
+          console.log('[VoIP Service] Device already registered, skipping');
         }
-      } finally {
-        clearTimeout(timeoutId);
+        this.emit('registrationStateChanged', true);
+      } else {
+        console.log('[VoIP Service] Unregistering device - will not receive calls');
+        // Check if device is actually registered before trying to unregister
+        if (this.isRegistered) {
+          await this.device.unregister();
+          this.isRegistered = false;
+          console.log('✅ [VoIP Service] Device unregistered');
+        } else {
+          console.log('[VoIP Service] Device already unregistered, skipping');
+        }
+        this.emit('registrationStateChanged', false);
       }
     } catch (err) {
-      console.error('DNS test error:', err);
+      console.error('[VoIP Service] ❌ Failed to toggle inbound availability:', err?.message || err);
+      throw err;
     }
   }
 
-  setupUAEventHandlers() {
-    // Connection events
-    this.ua.on('connected', () => {
-      console.log('WebSocket connected successfully');
+  /**
+   * Show browser notification for incoming calls
+   * Requires notification permission
+   */
+  _showBrowserNotification(data) {
+    // Check if notifications are supported and permitted
+    if (!('Notification' in window)) {
+      console.warn('[VoIP Service] Browser notifications not supported');
+      return;
+    }
+
+    // Request permission if not yet granted
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+      return;
+    }
+
+    if (Notification.permission === 'granted') {
+      try {
+        const notification = new Notification('📞 Incoming Call', {
+          body: `Call from ${data.from}`,
+          icon: '/favicon/favicon-96x96.png',
+          badge: '/favicon/favicon-96x96.png',
+          tag: data.callSid,
+          requireInteraction: true,
+          silent: false
+        });
+
+        // Handle notification click
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+          
+          // Navigate to call management if not already there
+          if (!window.location.pathname.includes('/dashboard/calls')) {
+            window.location.href = '/dashboard/calls';
+          }
+        };
+      } catch (error) {
+        console.error('[VoIP Service] Error showing notification:', error);
+      }
+    }
+  }
+
+  _wireDeviceEvents(device) {
+    device.on('registered', () => {
+      this.isRegistered = true;
+      this.emit('registrationStateChanged', true);
     });
 
-    this.ua.on('disconnected', () => {
-      console.log('WebSocket disconnected');
+    device.on('unregistered', () => {
       this.isRegistered = false;
-      this.emit('registrationStateChanged', { isRegistered: false });
+      this.emit('registrationStateChanged', false);
+    });
 
-      // Add automatic reconnection logic with exponential backoff
-      let reconnectAttempt = 0;
-      const maxReconnectAttempts = 5;
+    device.on('error', (err) => {
+      console.error('[Twilio Voice] Device error:', err);
+      // Keep UI consistent
+      this.emit('connectionFailed', { message: err?.message || 'Twilio Voice device error' });
+    });
 
-      const attemptReconnect = () => {
-        if (reconnectAttempt < maxReconnectAttempts) {
-          reconnectAttempt++;
-          const delay = Math.min(30, Math.pow(2, reconnectAttempt)) * 1000;
+    device.on('incoming', (connection) => {
+      console.log('[VoIP Service] 📞 Incoming call received');
+      console.log('[VoIP Service] From:', connection?.parameters?.From);
+      console.log('[VoIP Service] CallSid:', connection?.parameters?.CallSid);
+      console.log('[VoIP Service] Current connection exists:', !!this.connection);
+      
+      // If already on a call, reject additional calls for now
+      if (this.connection) {
+        console.warn('[VoIP Service] Rejecting incoming call - already on a call');
+        try { connection.reject(); } catch (e) { /* ignore */ }
+        return;
+      }
 
-          console.log(`Attempting to reconnect (${reconnectAttempt}/${maxReconnectAttempts}) in ${delay / 1000} seconds...`);
+      this.incomingConnection = connection;
 
-          setTimeout(() => {
-            if (this.ua) {
-              console.log('Reconnecting WebSocket...');
-              this.ua.start();
-            }
-          }, delay);
-        } else {
-          console.log('Maximum reconnection attempts reached. Please refresh the page.');
-          this.emit('connectionFailed', { message: 'Maximum reconnection attempts reached' });
-        }
+      const from = connection?.parameters?.From || 'Unknown';
+      const call = {
+        id: Date.now().toString(),
+        number: from,
+        direction: 'incoming',
+        status: 'ringing',
+        timestamp: new Date(),
+        callSid: connection?.parameters?.CallSid
       };
 
-      attemptReconnect();
-    });
+      console.log('[VoIP Service] ✅ Incoming call added to history and emitted');
+      this.callHistory.unshift(call);
+      this.emit('incomingCall', { ...call });
 
-    // Registration events
-    this.ua.on('registered', () => {
-      console.log('Successfully registered');
-      this.isRegistered = true;
-      this.emit('registrationStateChanged', { isRegistered: true });
-    });
-
-    this.ua.on('unregistered', () => {
-      console.log('Unregistered');
-      this.isRegistered = false;
-      this.emit('registrationStateChanged', { isRegistered: false });
-    });
-
-    this.ua.on('registrationFailed', (e) => {
-      console.error('Registration failed', e);
-      this.isRegistered = false;
-      this.emit('registrationStateChanged', { isRegistered: false });
-    });
-
-    // Call events
-    this.ua.on('newRTCSession', (event) => {
-      const session = event.session;
-
-      if (session.direction === 'incoming') {
-        this.handleIncomingCall(session);
-      }
+      this._wireConnectionEvents(connection, call.id);
     });
   }
 
-  async register() {
-    if (!this.ua) {
-      throw new Error('VoIP service not initialized');
+  _wireConnectionEvents(connection, callId) {
+    const updateStatus = (status) => {
+      const idx = this.callHistory.findIndex(c => c.id === callId);
+      if (idx === -1) return;
+      const callSid = connection?.parameters?.CallSid || this.callHistory[idx].callSid;
+      const updatedCall = {
+        ...this.callHistory[idx],
+        status,
+        callSid,
+        parameters: connection?.parameters || this.callHistory[idx].parameters
+      };
+
+      this.callHistory[idx] = updatedCall;
+      this.emit('callStatusChanged', { ...updatedCall });
+
+      if (status === 'active' || status === 'hold') {
+        this.setLastActiveCall({
+          ...updatedCall,
+          timestamp: updatedCall.timestamp || new Date()
+        });
+      }
+
+      if (['ended', 'failed', 'canceled', 'rejected'].includes(status)) {
+        this.setLastActiveCall(null);
+      }
+    };
+
+    connection.on('accept', () => {
+      this.connection = connection;
+      this.incomingConnection = null;
+      updateStatus('active');
+    });
+
+    connection.on('disconnect', () => {
+      this._finalizeCall(callId, 'ended');
+    });
+
+    connection.on('cancel', () => {
+      this._finalizeCall(callId, 'canceled');
+    });
+
+    connection.on('reject', () => {
+      console.log('[Twilio Voice] Connection rejected');
+      this._finalizeCall(callId, 'rejected');
+    });
+
+    connection.on('error', (err) => {
+      console.error('[Twilio Voice] Connection error:', err);
+      console.error('[Twilio Voice] Error code:', err?.code);
+      console.error('[Twilio Voice] Error message:', err?.message);
+      
+      // Log detailed error info for 31005
+      if (err?.message?.includes('31005')) {
+        console.error('[Twilio Voice] ⚠️  ERROR 31005: Gateway rejected call');
+        console.error('[Twilio Voice] This usually means:');
+        console.error('[Twilio Voice]   1. TwiML endpoint returned invalid response');
+        console.error('[Twilio Voice]   2. Webhook URL is unreachable');
+        console.error('[Twilio Voice]   3. Gateway connection issue');
+        console.error('[Twilio Voice]   4. Token expired or invalid');
+      }
+      
+      this._finalizeCall(callId, 'failed');
+    });
+  }
+
+  _finalizeCall(callId, reason) {
+    const idx = this.callHistory.findIndex(c => c.id === callId);
+    if (idx !== -1) {
+      const endTime = new Date();
+      const startTime = new Date(this.callHistory[idx].timestamp);
+      const duration = Math.max(0, Math.floor((endTime - startTime) / 1000));
+      this.callHistory[idx] = { ...this.callHistory[idx], status: reason, duration };
+      console.log(`[Twilio Voice] Call finalized: ${reason} (Duration: ${duration}s)`);
+      this.emit('callStatusChanged', { ...this.callHistory[idx] });
     }
 
-    try {
-      this.ua.register();
-      return true;
-    } catch (error) {
-      console.error('Registration failed:', error);
-      throw error;
+    if (this.connection) {
+      try { this.connection.disconnect(); } catch (e) { /* ignore */ }
     }
+    this.connection = null;
+    this.incomingConnection = null;
+    this.setLastActiveCall(null);
   }
 
   async unregister() {
-    if (this.ua && this.isRegistered) {
-      try {
-        this.ua.unregister();
-      } catch (error) {
-        console.error('Failed to unregister:', error);
-      }
-    }
-  }
-
-  async sendDTMF(tone) {
-    if (!this.session) {
-      throw new Error('No active call to send DTMF tones');
-    }
-
+    if (!this.device) return;
     try {
-      this.session.sendDTMF(tone);
-      return true;
-    } catch (error) {
-      console.error('Failed to send DTMF tone:', error);
-      throw error;
+      await this.device.unregister();
+    } finally {
+      this._inboundEnabled = false;
+      this._isInitialized = false;
+      this.setLastActiveCall?.(null);
+      this._persistLastActiveCall?.(null);
+      // Clean up agent heartbeat timer
+      if (this._agentPingTimer) {
+        clearInterval(this._agentPingTimer);
+        this._agentPingTimer = null;
+      }
+      
+      // Clean up Socket.IO connection
+      if (this.socket) {
+        console.log('[VoIP Service] Disconnecting Socket.IO...');
+        this.socket.disconnect();
+        this.socket = null;
+      }
+      
+      // Clean up Twilio device
+      try { this.device.destroy(); } catch (e) { /* ignore */ }
+      this.device = null;
+      this.isRegistered = false;
+      this.emit('registrationStateChanged', false);
     }
-  }
-
-  setRemoteAudioElement(element) {
-    console.log('Setting remote audio element', element);
-    this.remoteAudio = element;
-
-    if (!this.remoteAudio) return false;
-
-    // Configure the audio element with essential settings
-    this.remoteAudio.autoplay = true;
-    this.remoteAudio.playsInline = true;
-    this.remoteAudio.muted = false;
-    this.remoteAudio.volume = 1.0;
-
-    // Add this code to handle autoplay restrictions
-    const tryPlayback = () => {
-      this.remoteAudio.play()
-        .then(() => console.log('Audio element ready for playback'))
-        .catch(err => {
-          console.warn('Audio playback needs user interaction:', err);
-        });
-    };
-
-    // Try initial playback
-    tryPlayback();
-
-    // Add a click handler to the document to unlock audio on user interaction
-    const unlockAudioOnClick = () => {
-      tryPlayback();
-      // Only need to do this once
-      document.removeEventListener('click', unlockAudioOnClick);
-    };
-    document.addEventListener('click', unlockAudioOnClick);
-
-    return true;
   }
 
   async makeCall(number) {
+    if (!this.device) throw new Error('Twilio device not initialized');
+    if (!this.isRegistered) throw new Error('Twilio device not registered - ensure device.register() completed');
+    if (this.connection) throw new Error('Already on a call');
+
+    const to = (number || '').toString().trim();
+    if (!to) throw new Error('Missing phone number');
+
+    console.log('[Twilio Voice] Making call to:', to);
+    console.log('[Twilio Voice] Device registered:', this.isRegistered);
+    console.log('[Twilio Voice] Identity:', this._identity);
+
+    const call = {
+      id: Date.now().toString(),
+      number: to,
+      direction: 'outgoing',
+      status: 'connecting',
+      timestamp: new Date()
+    };
+
+    this.callHistory.unshift(call);
+    this.emit('callStatusChanged', { ...call });
+
     try {
-      if (!this.ua) {
-        throw new Error('JsSIP user agent not initialized');
-      }
-
-      // Check if registered before making a call
-      if (!this.isRegistered) {
-        console.log('Not registered with FreeSWITCH, attempting registration...');
-        try {
-          await this.register();
-          // Wait for registration to complete
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Registration timed out'));
-            }, 5000);
-
-            const registrationHandler = (status) => {
-              if (status.isRegistered) {
-                clearTimeout(timeout);
-                this.removeListener('registrationStateChanged', registrationHandler);
-                resolve();
-              }
-            };
-
-            this.on('registrationStateChanged', registrationHandler);
-          });
-        } catch (error) {
-          console.error('Failed to register:', error);
-          throw new Error('Failed to register with FreeSWITCH. Please check your credentials.');
-        }
-      }
-
-      // Get microphone access
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
+      console.log('[Twilio Voice] Initiating device.connect()...');
+      const connection = await this.device.connect({
+        params: { To: to }
       });
+      console.log('[Twilio Voice] ✅ Device.connect() successful');
+      this.connection = connection;
 
-      console.log('Local audio stream obtained for call');
-
-      // Create call options with a customized sessionTimersExpires option
-      const options = {
-        mediaConstraints: { audio: true, video: false },
-        pcConfig: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-          ]
-        },
-        mediaStream: this.localStream,
-        // The standard JsSIP way to set Session-Expires header
-        sessionTimersExpires: 120
-        // Remove the extraHeaders that are causing the duplicate
-      };
-
-      // Format the target number
-      const targetNumber = number === '9996' ? '9996' : number;
-      const target = `sip:${targetNumber}@${this.freeswitchServer}`;
-
-      console.log(`Dialing: ${target}`);
-
-      // Make the call with the updated options
-      this.session = this.ua.call(target, options);
-
-      // Set up session event handlers and continue as before...
-      this.setupSessionEventHandlers(this.session);
-
-      // Add call to history
-      const call = {
-        id: Date.now().toString(),
-        number: targetNumber,
-        direction: 'outgoing',
-        status: 'connecting',
-        timestamp: new Date()
-      };
-
-      this.callHistory.unshift(call);
-      this.emit('callStatusChanged', { ...call });
-
+      this._wireConnectionEvents(connection, call.id);
+      // For outbound, accept fires once connected
       return true;
     } catch (error) {
-      console.error('Call failed:', error);
+      console.error('[Twilio Voice] ❌ Device.connect() failed:', error?.message || error);
+      this._finalizeCall(call.id, 'failed');
       throw error;
-    }
-  }
-
-  setupSessionEventHandlers(session) {
-    // Handle session progress (ringing)
-    session.on('progress', () => {
-      console.log('Call is ringing...');
-      const callIndex = this.findActiveCallIndex();
-      if (callIndex !== -1) {
-        this.callHistory[callIndex].status = 'ringing';
-        this.emit('callStatusChanged', { ...this.callHistory[callIndex] });
-      }
-    });
-
-    // Handle session accepted (call answered)
-    session.on('accepted', () => {
-      console.log('Call accepted');
-
-      const callIndex = this.findActiveCallIndex();
-      if (callIndex !== -1) {
-        this.callHistory[callIndex].status = 'active';
-        this.emit('callStatusChanged', { ...this.callHistory[callIndex] });
-      }
-    });
-
-    // Handle session confirmed (media established)
-    session.on('confirmed', () => {
-      console.log('Call confirmed - media established');
-    });
-
-    // Handle call ended
-    session.on('ended', () => {
-      this.handleCallEnded(session, 'ended');
-    });
-
-    // Handle call failed
-    session.on('failed', (e) => {
-      console.error('Call failed', e);
-      this.handleCallEnded(session, 'failed');
-    });
-
-    // Handle media events - THIS IS CRITICAL FOR AUDIO
-    session.on('addstream', (event) => {
-      console.log('Remote stream received', event.stream);
-      if (this.remoteAudio) {
-        this.remoteAudio.srcObject = event.stream;
-        this.remoteAudio.play()
-          .then(() => console.log('Remote audio playback started'))
-          .catch(err => console.error('Failed to play remote audio:', err));
-      }
-    });
-  }
-
-  findActiveCallIndex() {
-    return this.callHistory.findIndex(
-      call => ['connecting', 'ringing', 'active', 'hold'].includes(call.status)
-    );
-  }
-
-  handleCallEnded(session, reason) {
-    console.log(`Call ${reason}`);
-
-    const callIndex = this.findActiveCallIndex();
-    if (callIndex !== -1) {
-      const endTime = new Date();
-      const startTime = new Date(this.callHistory[callIndex].timestamp);
-      const duration = Math.floor((endTime - startTime) / 1000);
-
-      this.callHistory[callIndex] = {
-        ...this.callHistory[callIndex],
-        status: reason,
-        duration
-      };
-
-      this.emit('callStatusChanged', { ...this.callHistory[callIndex] });
-    }
-
-    // Clean up media
-    if (this.localStream) {
-      this.localStream.getTracks().forEach(track => track.stop());
-      this.localStream = null;
-    }
-
-    if (this.remoteAudio) {
-      this.remoteAudio.srcObject = null;
-    }
-
-    if (this.session === session) {
-      this.session = null;
     }
   }
 
   async answerCall() {
-    if (!this.incomingSession) {
-      throw new Error('No incoming call to answer');
-    }
-
+    if (!this.incomingConnection) throw new Error('No incoming call to answer');
     try {
-      // Get audio stream for microphone
-      this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      // Configure answer options
-      const options = {
-        mediaConstraints: { audio: true, video: false },
-        pcConfig: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-          ]
-        },
-        mediaStream: this.localStream
-      };
-
-      // Answer the call
-      this.incomingSession.answer(options);
-      this.session = this.incomingSession;
-
-      // Update the call status
-      const callIndex = this.findActiveCallIndex();
-      if (callIndex !== -1) {
-        this.callHistory[callIndex].status = 'active';
-        this.emit('callStatusChanged', { ...this.callHistory[callIndex] });
-      }
-
-      this.incomingSession = null;
+      this.incomingConnection.accept();
       return true;
     } catch (error) {
-      console.error('Failed to answer call:', error);
       throw error;
     }
   }
 
-  async hangupCall() {
-    if (this.incomingSession) {
-      try {
-        this.incomingSession.terminate();
-        this.incomingSession = null;
+  _currentCallSid(callSidOverride) {
+    return (
+      callSidOverride ||
+      this.connection?.parameters?.CallSid ||
+      this.incomingConnection?.parameters?.CallSid ||
+      this.lastActiveCall?.callSid ||
+      null
+    );
+  }
+
+  async hangupCall(options = {}) {
+    const { strategy = 'terminate', callSid } = options;
+    const targetCallSid = this._currentCallSid(callSid);
+
+    if (strategy === 'ignore') {
+      if (this.incomingConnection) {
+        try { this.incomingConnection.reject(); } catch (error) { throw error; }
+        this.incomingConnection = null;
         return true;
-      } catch (error) {
-        console.error('Failed to reject incoming call:', error);
-        throw error;
       }
+      if (this.connection) {
+        this.connection.disconnect();
+        this.connection = null;
+        return true;
+      }
+      throw new Error('No active call to ignore');
     }
 
-    if (!this.session) {
+    if (!this.connection && !this.incomingConnection && !targetCallSid) {
       throw new Error('No active call to hang up');
     }
 
-    try {
-      this.session.terminate();
-      return true;
-    } catch (error) {
-      console.error('Failed to hang up call:', error);
-      throw error;
+    let backendSucceeded = false;
+
+    // Terminate the caller side via backend to avoid re-queuing
+    if (targetCallSid) {
+      try {
+        await axiosInstance.post(`/voice/calls/${targetCallSid}/hangup`);
+        backendSucceeded = true;
+      } catch (err) {
+        // Fallback: try body-based endpoint (avoids any path issues)
+        try {
+          await axiosInstance.post('/voice/calls/hangup', { callSid: targetCallSid });
+          backendSucceeded = true;
+        } catch (err2) {
+          console.warn('[VoIP Service] Backend hangup failed:', err?.message || err);
+          console.warn('[VoIP Service] Fallback hangup also failed:', err2?.message || err2);
+        }
+      }
     }
+
+    // Clean up local connections so UI clears immediately
+    const hadLocalConnection = !!(this.connection || this.incomingConnection);
+
+    if (this.connection) {
+      try { this.connection.disconnect(); } catch (err) { /* ignore */ }
+      this.connection = null;
+    }
+
+    if (this.incomingConnection) {
+      try { this.incomingConnection.reject(); } catch (err) { /* ignore */ }
+      this.incomingConnection = null;
+    }
+
+    this.setLastActiveCall(null);
+
+    if (!backendSucceeded && !hadLocalConnection) {
+      // Surface a hard error so UI can keep the widget open for retry
+      throw new Error('Hangup failed: backend not reachable and no local call to disconnect');
+    }
+
+    return true;
+  }
+
+  async ignoreCall(options = {}) {
+    return this.hangupCall({ ...options, strategy: 'ignore' });
+  }
+
+  async sendDTMF(tone) {
+    if (!this.connection) throw new Error('No active call to send DTMF tones');
+    this.connection.sendDigits(tone);
+    return true;
   }
 
   async holdCall() {
-    if (!this.session) {
-      throw new Error('No active call to hold');
+    if (!this.connection) throw new Error('No active call to hold');
+    // Simple client-side mute - TwiML backend redirection terminates the call
+    this.connection.mute(true);
+
+    const idx = this.callHistory.findIndex(c => c.status === 'active');
+    if (idx !== -1) {
+      this.callHistory[idx] = { ...this.callHistory[idx], status: 'hold' };
+      this.emit('callStatusChanged', { ...this.callHistory[idx] });
     }
-
-    try {
-      this.session.hold();
-
-      // Update call history
-      const callIndex = this.findActiveCallIndex();
-      if (callIndex !== -1) {
-        this.callHistory[callIndex].status = 'hold';
-        this.emit('callStatusChanged', { ...this.callHistory[callIndex] });
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Failed to hold call:', error);
-      throw error;
-    }
+    console.log('✅ [VoIP] Call muted (on hold)');
+    return true;
   }
 
   async resumeCall() {
-    if (!this.session) {
-      throw new Error('No active call to resume');
+    if (!this.connection) throw new Error('No active call to resume');
+    // Simple client-side unmute
+    this.connection.mute(false);
+
+    const idx = this.callHistory.findIndex(c => c.status === 'hold');
+    if (idx !== -1) {
+      this.callHistory[idx] = { ...this.callHistory[idx], status: 'active' };
+      this.emit('callStatusChanged', { ...this.callHistory[idx] });
     }
-
-    try {
-      this.session.unhold();
-
-      // Update call history
-      const callIndex = this.callHistory.findIndex(call => call.status === 'hold');
-      if (callIndex !== -1) {
-        this.callHistory[callIndex].status = 'active';
-        this.emit('callStatusChanged', { ...this.callHistory[callIndex] });
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Failed to resume call:', error);
-      throw error;
-    }
+    console.log('✅ [VoIP] Call unmuted (resumed)');
+    return true;
   }
 
-  async transferCall(target) {
-    if (!this.session) {
+  async transferCall(transferTo) {
+    if (!transferTo) {
+      throw new Error('Transfer target number is required');
+    }
+
+    const callSid = this._currentCallSid();
+    if (!callSid) {
       throw new Error('No active call to transfer');
     }
 
     try {
-      const targetUri = target.includes('@') ?
-        `sip:${target}` :
-        `sip:${target}@${this.freeswitchServer}`;
+      console.log(`[VoIP Service] Initiating transfer of ${callSid} to ${transferTo}`);
+      
+      const response = await axiosInstance.post(
+        `/voice/calls/${callSid}/transfer`,
+        { transferTo },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
 
-      this.session.refer(targetUri);
-
-      // Update call history
-      const callIndex = this.findActiveCallIndex();
-      if (callIndex !== -1) {
-        this.callHistory[callIndex].status = 'transferring';
-        this.emit('callStatusChanged', { ...this.callHistory[callIndex] });
+      console.log(`[VoIP Service] ✅ Transfer initiated:`, response.data);
+      
+      // Update local call state to indicate transfer in progress
+      const idx = this.callHistory.findIndex(c => c.callSid === callSid);
+      if (idx !== -1) {
+        this.callHistory[idx] = {
+          ...this.callHistory[idx],
+          status: 'transferring',
+          transferredTo: transferTo
+        };
+        this.emit('callStatusChanged', { ...this.callHistory[idx] });
       }
 
       return true;
     } catch (error) {
-      console.error('Failed to transfer call:', error);
+      console.error('[VoIP Service] Transfer failed:', error?.message || error);
       throw error;
     }
   }
 
-  handleIncomingCall(session) {
-    if (this.session) {
-      // Already on a call, reject this one
-      session.terminate();
-      return;
-    }
-
-    this.incomingSession = session;
-
-    // Set up event handlers for the incoming session
-    this.setupSessionEventHandlers(session);
-
-    // Extract caller information
-    const from = session.remote_identity;
-    const number = from.uri.user || 'Unknown';
-
-    const call = {
-      id: Date.now().toString(),
-      number: number,
-      direction: 'incoming',
-      status: 'ringing',
-      timestamp: new Date()
-    };
-
-    // Add to call history
-    this.callHistory.unshift(call);
-
-    // Emit event for UI
-    this.emit('incomingCall', { ...call });
-  }
-
-  extractNumber(uri) {
-    if (!uri) return 'Unknown';
-    return uri.user || 'Unknown';
+  setRemoteAudioElement(_element) {
+    // Twilio Voice JS manages remote audio routing internally.
+    return true;
   }
 
   getCallHistory() {
     return [...this.callHistory];
+  }
+
+  isInitialized() {
+    return !!this._isInitialized;
+  }
+
+  getCurrentActiveCall() {
+    if (this.connection) {
+      const active = this.callHistory.find(c => c.status === 'active' || c.status === 'hold');
+      if (active) {
+        return {
+          ...active,
+          parameters: this.connection.parameters || {},
+          callSid: this.connection.parameters?.CallSid || active.callSid
+        };
+      }
+    }
+    return this._loadLastActiveCall();
+  }
+
+  setLastActiveCall(call) {
+    this.lastActiveCall = call;
+    this._persistLastActiveCall(call);
+  }
+
+  _persistLastActiveCall(call) {
+    try {
+      if (call) {
+        sessionStorage.setItem(this._lastActiveCallKey, JSON.stringify(call));
+      } else {
+        sessionStorage.removeItem(this._lastActiveCallKey);
+      }
+    } catch (err) {
+      console.warn('[VoIP Service] Failed to persist active call:', err?.message);
+    }
+  }
+
+  _loadLastActiveCall() {
+    if (this.lastActiveCall) return this.lastActiveCall;
+    try {
+      const raw = sessionStorage.getItem(this._lastActiveCallKey);
+      if (raw) {
+        this.lastActiveCall = JSON.parse(raw);
+        return this.lastActiveCall;
+      }
+    } catch (err) {
+      console.warn('[VoIP Service] Failed to load active call from session:', err?.message);
+    }
+    return null;
   }
 }
 

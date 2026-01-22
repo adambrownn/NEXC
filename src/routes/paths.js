@@ -68,8 +68,12 @@ export const CATEGORY_PATH = {
 
 export const PATH_DASHBOARD = {
   root: ROOTS_DASHBOARD,
+  overview: path(ROOTS_DASHBOARD, "/overview"),
+  analytics: {
+    root: path(ROOTS_DASHBOARD, "/analytics"),
+  },
   general: {
-    customers: path(ROOTS_DASHBOARD, "/reserved"),
+    customers: path(ROOTS_DASHBOARD, "/customers"), // FIXED: Changed from "/reserved"
     sale: path(ROOTS_DASHBOARD, "/booked"),
     applications: path(ROOTS_DASHBOARD, "/applications"),
     users: path(ROOTS_DASHBOARD, "/users"),
@@ -87,6 +91,13 @@ export const PATH_DASHBOARD = {
     requests: path(ROOTS_DASHBOARD, "/service/requests"),
     technicians: path(ROOTS_DASHBOARD, "/service/technicians"),
     chat: path(ROOTS_DASHBOARD, "/service/chat"),
+    tickets: path(ROOTS_DASHBOARD, "/service/tickets"),
+  },
+
+  technician: {
+    root: path(ROOTS_DASHBOARD, "/my-tasks"),
+    detail: (taskId) => path(ROOTS_DASHBOARD, `/my-tasks/${taskId}`),
+    myTasks: path(ROOTS_DASHBOARD, "/my-tasks"),
   },
 
   trades: {
@@ -122,6 +133,9 @@ export const PATH_DASHBOARD = {
     new: path(ROOTS_DASHBOARD, '/blog/new'),
     view: path(ROOTS_DASHBOARD, '/blog/:id'),
     edit: path(ROOTS_DASHBOARD, '/blog/:id/edit')
+  },
+  media: {
+    root: path(ROOTS_DASHBOARD, '/media'),
   },
   faq: {
     root: path(ROOTS_DASHBOARD, "/faqs"),

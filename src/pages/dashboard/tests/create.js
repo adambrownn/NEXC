@@ -9,14 +9,22 @@ import {
   InputLabel,
   OutlinedInput,
   InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Box,
+  Stack,
 } from "@mui/material";
 
 import SaveIcon from '@mui/icons-material/Save';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 
 import SubCard from "../../../components/_dashboard/cards/SubCard";
 import { gridSpacing } from "../../../utils/constant";
 import axiosInstance from "../../../axiosConfig";
 import TradeSelectCard from "../../../components/_dashboard/cards/TradeSelectCard";
+import MediaGallery from "../../../components/_dashboard/blog/MediaGallery";
 import { useLocation } from "react-router-dom";
 
 const TradeContext = createContext();
@@ -26,6 +34,7 @@ const CreateTest = (props) => {
   const [formInput, setFormInput] = useState({});
   const [isEditingId, setIsEditingId] = useState("");
   const [selectedTrade, setSelectedTrade] = useState();
+  const [showMediaGallery, setShowMediaGallery] = useState(false);
 
   const editId = useLocation().pathname?.split("/")[4];
 
@@ -48,6 +57,14 @@ const CreateTest = (props) => {
     });
   };
 
+  const handleSelectThumbnail = (media) => {
+    setFormInput(prev => ({
+      ...prev,
+      thumbnail: media.url
+    }));
+    setShowMediaGallery(false);
+  };
+
   const handleAddNewTest = async () => {
     if (selectedTrade && Object.entries(formInput).length > 4) {
       formInput.tradeId = selectedTrade;
@@ -66,7 +83,8 @@ const CreateTest = (props) => {
   };
 
   const handleEditTest = async () => {
-    if (editId && Object.entries(formInput).length > 4) {
+    if (editId && selectedTrade && Object.entries(formInput).length > 4) {
+      formInput.tradeId = selectedTrade;
       const resp = await axiosInstance.put(`/tests/${editId}`, formInput);
       if (resp.data?.err) {
         alert(resp.data.err);
@@ -76,11 +94,12 @@ const CreateTest = (props) => {
         );
         setTestsList([..._testList, formInput]);
         setFormInput({});
+        setSelectedTrade("");
         setIsEditingId("");
         alert("Test edited successfully");
       }
     } else {
-      alert("All Inputs are required");
+      alert("All Inputs are required including trade selection");
     }
   };
 
@@ -179,6 +198,46 @@ const CreateTest = (props) => {
                 onChange={handleInputChange}
               />
             </Grid>
+
+            <Grid item>
+              <Box>
+                <InputLabel sx={{ mb: 1 }}>Test Thumbnail</InputLabel>
+                <Stack direction="row" spacing={2} alignItems="center">
+                  {formInput.thumbnail && (
+                    <Box
+                      component="img"
+                      src={formInput.thumbnail}
+                      alt="Test thumbnail"
+                      sx={{
+                        width: 100,
+                        height: 60,
+                        objectFit: 'cover',
+                        borderRadius: 1,
+                        border: 1,
+                        borderColor: 'divider'
+                      }}
+                    />
+                  )}
+                  <Stack spacing={1}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<PhotoLibraryIcon />}
+                      onClick={() => setShowMediaGallery(true)}
+                    >
+                      Select Thumbnail
+                    </Button>
+                    <TextField
+                      size="small"
+                      label="Or enter URL"
+                      fullWidth
+                      name="thumbnail"
+                      value={formInput.thumbnail || ""}
+                      onChange={handleInputChange}
+                    />
+                  </Stack>
+                </Stack>
+              </Box>
+            </Grid>
             <Grid item>
               <TextField
                 id="outlined-basic"
@@ -203,6 +262,29 @@ const CreateTest = (props) => {
           </Grid>
         </SubCard>
       </Grid>
+
+      <Dialog
+        open={showMediaGallery}
+        onClose={() => setShowMediaGallery(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>Select Test Thumbnail</DialogTitle>
+        <DialogContent>
+          <MediaGallery
+            onSelectMedia={handleSelectThumbnail}
+            selectionMode={true}
+            allowMultiple={false}
+            allowedTypes={['image']}
+            category="cover"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowMediaGallery(false)}>
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Grid>
   );
 };

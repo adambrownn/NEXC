@@ -31,19 +31,21 @@ import { CheckoutContext } from "../../pages/EcommerceCheckout";
 
 // CartItem component using CartContext directly
 function CartItem(props) {
-  // Use global cart context for all operations
   const { updateQuantity, removeItem } = useCart();
   const [quantity, setQuantity] = useState(props.quantity || 1);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(""); // NEW: Track error state
 
   // Handle quantity change
   const handleQuantityChange = async (change) => {
     try {
       setIsUpdating(true);
+      setErrorMsg(""); // Clear previous error
       const newQuantity = Math.max(1, quantity + change);
       setQuantity(newQuantity);
       await updateQuantity(props._id, newQuantity);
     } catch (error) {
+      setErrorMsg('Failed to update quantity. Please try again.');
       console.error('Error updating quantity:', error);
     } finally {
       setIsUpdating(false);
@@ -54,8 +56,10 @@ function CartItem(props) {
   const handleDeleteItem = async () => {
     try {
       setIsUpdating(true);
+      setErrorMsg(""); // Clear previous error
       await removeItem(props._id);
     } catch (error) {
+      setErrorMsg('Failed to remove item. Please try again.');
       console.error('Error removing item:', error);
     } finally {
       setIsUpdating(false);
@@ -131,7 +135,13 @@ function CartItem(props) {
           This item requires additional configuration in the next step.
         </Alert>
       )}
-      
+
+      {errorMsg && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {errorMsg}
+        </Alert>
+      )}
+
       {isUpdating && (
         <Box 
           sx={{ 

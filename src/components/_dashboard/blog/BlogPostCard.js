@@ -179,7 +179,7 @@ export default function BlogPostCard({ post, index }) {
             variant="subtitle2"
             underline="hover"
             component={RouterLink}
-            to={id ? `/dashboard/blog/post/${id}` : '#'}
+            to={id ? `/dashboard/blog/${id}` : '#'}
             sx={{
               ...(latestPostLarge && { typography: "h5", height: 60 }),
               ...((latestPostLarge || latestPost) && {

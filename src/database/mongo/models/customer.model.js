@@ -4,9 +4,27 @@ const modelRegistry = require('../modelRegistry');
 
 // Customer Schema
 const customerSchema = new mongoose.Schema({
-  firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
-  dateOfBirth: { type: Date, required: true },
+  // firstName/lastName: Required for INDIVIDUAL, optional for COMPANY (used for rep contact)
+  firstName: { 
+    type: String, 
+    required: function() {
+      return this.customerType === 'INDIVIDUAL';
+    }
+  },
+  lastName: { 
+    type: String, 
+    required: function() {
+      return this.customerType === 'INDIVIDUAL';
+    }
+  },
+  // Company representative contact info (for COMPANY type)
+  representativeName: { type: String }, // Full name of company rep
+  dateOfBirth: { 
+    type: Date, 
+    required: function() {
+      return this.customerType === 'INDIVIDUAL';
+    }
+  },
   email: { type: String, required: true, unique: true },
   phoneNumber: { type: String, required: true },
   NINumber: { type: String },
@@ -20,9 +38,70 @@ const customerSchema = new mongoose.Schema({
   status: { 
     type: String, 
     enum: Object.values(CUSTOMER_STATUS),
-    default: CUSTOMER_STATUS.ACTIVE
+    default: CUSTOMER_STATUS.NEW_FIRST_TIME
   },
-  companyName: { type: String },
+  // Required for COMPANY type customers
+  companyName: { 
+    type: String,
+    required: function() {
+      return this.customerType === 'COMPANY';
+    }
+  },
+  
+  // Track where customer profile was created from
+  createdFrom: {
+    type: String,
+    enum: ['WEBSITE', 'DASHBOARD', 'GROUP_BOOKING', 'PHONE_ORDER', 'IMPORT'],
+    default: 'DASHBOARD'
+  },
+  
+  // Profile completion tracking (for website registrations)
+  profileIncomplete: { 
+    type: Boolean, 
+    default: false 
+  },
+  
+  // Link to User account (for website customers)
+  // Required only when createdFrom is 'WEBSITE'
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    sparse: true, // Allow null/undefined for dashboard-created customers
+    required: function() {
+      return this.createdFrom === 'WEBSITE';
+    }
+  },
+  
+  // Status change history (automatic tracking)
+  statusHistory: [{
+    previousStatus: {
+      type: String,
+      enum: Object.values(CUSTOMER_STATUS)
+    },
+    newStatus: {
+      type: String,
+      enum: Object.values(CUSTOMER_STATUS),
+      required: true
+    },
+    reason: { type: String },
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'orders'
+    },
+    changedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    automatic: { 
+      type: Boolean, 
+      default: false 
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, {

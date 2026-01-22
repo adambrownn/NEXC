@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import { forwardRef } from "react";
 import SimpleBarReact from "simplebar-react";
 // material
 import { alpha, styled } from "@mui/material/styles";
@@ -35,12 +36,7 @@ const SimpleBarStyle = styled(SimpleBarReact)(({ theme }) => ({
 
 // ----------------------------------------------------------------------
 
-Scrollbar.propTypes = {
-  children: PropTypes.node.isRequired,
-  sx: PropTypes.object,
-};
-
-export default function Scrollbar({ children, sx, ...other }) {
+const Scrollbar = forwardRef(({ children, sx, ...other }, ref) => {
   const isMobile =
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
@@ -48,7 +44,7 @@ export default function Scrollbar({ children, sx, ...other }) {
 
   if (isMobile) {
     return (
-      <Box sx={{ overflowX: "auto", ...sx }} {...other}>
+      <Box ref={ref} sx={{ overflowX: "auto", ...sx }} {...other}>
         {children}
       </Box>
     );
@@ -56,9 +52,18 @@ export default function Scrollbar({ children, sx, ...other }) {
 
   return (
     <RootStyle>
-      <SimpleBarStyle timeout={500} clickOnTrack={false} sx={sx} {...other}>
+      <SimpleBarStyle ref={ref} timeout={500} clickOnTrack={false} sx={sx} {...other}>
         {children}
       </SimpleBarStyle>
     </RootStyle>
   );
-}
+});
+
+Scrollbar.displayName = 'Scrollbar';
+
+export default Scrollbar;
+
+Scrollbar.propTypes = {
+  children: PropTypes.node.isRequired,
+  sx: PropTypes.object,
+};

@@ -4,6 +4,7 @@ const modelRegistry = require('../modelRegistry');
 const testSchema = mongoose.Schema({
   title: { type: String, required: [true, "Test Name is required"] },
   price: { type: Number, required: true, min: 0 },
+  thumbnail: { type: String }, // Test thumbnail image URL from Media system
   tradeId: {
     type: String,
     // required: [true, "Trade Id is required."],

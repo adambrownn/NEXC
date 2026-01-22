@@ -1,11 +1,7 @@
 // material
 import { alpha } from "@mui/material/styles";
-import palette from "./palette";
 
 // ----------------------------------------------------------------------
-
-const LIGHT_MODE = palette.grey[500];
-const DARK_MODE = '#000000';
 
 const createShadow = (color) => {
   const transparent1 = alpha(color, 0.2);
@@ -40,33 +36,54 @@ const createShadow = (color) => {
   ];
 };
 
-const createCustomShadow = (color) => {
-  const transparent = alpha(color, 0.16);
-  return {
-    z1: `0 1px 2px 0 ${transparent}`,
-    z4: `0 4px 8px 0 ${transparent}`,
-    z8: `0 8px 16px 0 ${transparent}`,
-    z12: `0 12px 24px -4px ${transparent}`,
-    z16: `0 16px 32px -4px ${transparent}`,
-    z20: `0 20px 40px -4px ${transparent}`,
-    z24: `0 24px 48px 0 ${transparent}`,
-    primary: `0 8px 16px 0 ${alpha(palette.primary.main, 0.24)}`,
-    info: `0 8px 16px 0 ${alpha(palette.info.main, 0.24)}`,
-    secondary: `0 8px 16px 0 ${alpha(palette.secondary.main, 0.24)}`,
-    success: `0 8px 16px 0 ${alpha(palette.success.main, 0.24)}`,
-    warning: `0 8px 16px 0 ${alpha(palette.warning.main, 0.24)}`,
-    error: `0 8px 16px 0 ${alpha(palette.error.main, 0.24)}`,
-  };
-};
+// Define colors for light and dark themes
+const LIGHT_GREY = "#919EAB";
+const DARK_GREY = "#161C24";
 
-export const customShadows = {
-  light: createCustomShadow(LIGHT_MODE),
-  dark: createCustomShadow(DARK_MODE)
-};
-
+// Create shadows for both themes
 const shadows = {
-  light: createShadow(LIGHT_MODE),
-  dark: createShadow(DARK_MODE)
+  light: createShadow(LIGHT_GREY),
+  dark: createShadow(DARK_GREY),
+};
+
+// Custom shadows for specific use cases
+export const customShadows = {
+  light: {
+    z1: `0 1px 2px 0 ${alpha(LIGHT_GREY, 0.24)}`,
+    z4: `0 4px 8px 0 ${alpha(LIGHT_GREY, 0.24)}`,
+    z8: `0 8px 16px 0 ${alpha(LIGHT_GREY, 0.24)}`,
+    z12: `0 12px 24px -4px ${alpha(LIGHT_GREY, 0.24)}`,
+    z16: `0 16px 32px -4px ${alpha(LIGHT_GREY, 0.24)}`,
+    z20: `0 20px 40px -4px ${alpha(LIGHT_GREY, 0.24)}`,
+    z24: `0 24px 48px 0 ${alpha(LIGHT_GREY, 0.24)}`,
+    // Construction industry specific shadows
+    card: `0 2px 8px 0 ${alpha(LIGHT_GREY, 0.08)}`,
+    cardHover: `0 8px 24px 0 ${alpha(LIGHT_GREY, 0.12)}`,
+    primary: `0 8px 16px 0 ${alpha("#2065D1", 0.24)}`,
+    secondary: `0 8px 16px 0 ${alpha("#3366FF", 0.24)}`,
+    info: `0 8px 16px 0 ${alpha("#0288D1", 0.24)}`,
+    success: `0 8px 16px 0 ${alpha("#2E7D32", 0.24)}`,
+    warning: `0 8px 16px 0 ${alpha("#FF9800", 0.24)}`,
+    error: `0 8px 16px 0 ${alpha("#D32F2F", 0.24)}`,
+  },
+  dark: {
+    z1: `0 1px 2px 0 ${alpha(DARK_GREY, 0.48)}`,
+    z4: `0 4px 8px 0 ${alpha(DARK_GREY, 0.48)}`,
+    z8: `0 8px 16px 0 ${alpha(DARK_GREY, 0.48)}`,
+    z12: `0 12px 24px -4px ${alpha(DARK_GREY, 0.48)}`,
+    z16: `0 16px 32px -4px ${alpha(DARK_GREY, 0.48)}`,
+    z20: `0 20px 40px -4px ${alpha(DARK_GREY, 0.48)}`,
+    z24: `0 24px 48px 0 ${alpha(DARK_GREY, 0.48)}`,
+    // Construction industry specific shadows
+    card: `0 2px 8px 0 ${alpha("#000000", 0.24)}`,
+    cardHover: `0 8px 24px 0 ${alpha("#000000", 0.32)}`,
+    primary: `0 8px 16px 0 ${alpha("#2065D1", 0.48)}`,
+    secondary: `0 8px 16px 0 ${alpha("#3366FF", 0.48)}`,
+    info: `0 8px 16px 0 ${alpha("#0288D1", 0.48)}`,
+    success: `0 8px 16px 0 ${alpha("#2E7D32", 0.48)}`,
+    warning: `0 8px 16px 0 ${alpha("#FF9800", 0.48)}`,
+    error: `0 8px 16px 0 ${alpha("#D32F2F", 0.48)}`,
+  },
 };
 
 export default shadows;

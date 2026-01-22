@@ -80,21 +80,51 @@ export default function LoginForm() {
           );
         }
 
-        // Handle response
+        // Handle response - Updated to support role-based access control
         if (authResponse.err) {
           setErrors({ afterSubmit: authResponse.err });
-        } else if (
-          !["admin", "superadmin"].includes(authResponse?.user?.accountType)
-        ) {
-          setErrors({
-            afterSubmit: "We know you are spying. You might not be an Admin!",
-          });
-          await AuthService.logout();
+        } else if (authResponse.success) {
+          // New response format
+          const user = authResponse.user;
+          const userRole = user?.accountType || user?.role;
+          
+          // Allow all authenticated users with valid roles to access dashboard
+          const validRoles = ["superadmin", "admin", "manager", "supervisor", "staff", "user", "visitor"];
+          
+          if (!userRole || !validRoles.includes(userRole.toLowerCase())) {
+            setErrors({
+              afterSubmit: "Access denied. Invalid user role.",
+            });
+            await AuthService.logout();
+          } else {
+            console.log('✅ Login successful for user:', user, 'Role:', userRole);
+            window.location.replace(`/dashboard`);
+          }
+        } else if (authResponse.accessToken) {
+          // Old response format
+          const user = authResponse.user;
+          const userRole = user?.accountType || user?.role;
+          
+          // Allow all authenticated users with valid roles to access dashboard
+          const validRoles = ["superadmin", "admin", "manager", "supervisor", "staff", "user", "visitor"];
+          
+          if (!userRole || !validRoles.includes(userRole.toLowerCase())) {
+            setErrors({
+              afterSubmit: "Access denied. Invalid user role.",
+            });
+            await AuthService.logout();
+          } else {
+            console.log('✅ Login successful for user:', user, 'Role:', userRole);
+            window.location.replace(`/dashboard`);
+          }
         } else {
-          window.location.replace(`/dashboard`);
+          setErrors({ afterSubmit: "Login failed. Please try again." });
         }
       } catch (err) {
-        setErrors({ afterSubmit: "Something went wrong" });
+        console.error('❌ Login error:', err);
+        setErrors({ afterSubmit: err.message || "Login failed. Please check your credentials." });
+      } finally {
+        setSubmitting(false);
       }
     },
   });

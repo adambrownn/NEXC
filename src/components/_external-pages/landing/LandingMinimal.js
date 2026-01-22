@@ -93,7 +93,9 @@ const CardStyle = styled(motion.div)(({ theme }) => ({
   },
 }));
 
-const CardInner = styled(Card)(({ theme, color }) => ({
+const CardInner = styled(Card, {
+  shouldForwardProp: (prop) => prop !== 'color',
+})(({ theme, color }) => ({
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
@@ -117,7 +119,9 @@ const CardInner = styled(Card)(({ theme, color }) => ({
   },
 }));
 
-const CardIconStyle = styled("div")(({ theme, color }) => ({
+const CardIconStyle = styled("div", {
+  shouldForwardProp: (prop) => prop !== 'color',
+})(({ theme, color }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",

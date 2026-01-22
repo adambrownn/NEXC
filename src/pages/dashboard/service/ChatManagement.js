@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import axiosInstance from '../../../axiosConfig';
 import {
     Container,
     Grid,
     Card,
-    CardContent,
     Typography,
+    Paper,
     Box,
     List,
     ListItem,
@@ -13,12 +14,6 @@ import {
     Avatar,
     TextField,
     Button,
-    Divider,
-    Badge,
-    Tabs,
-    Tab,
-    IconButton,
-    Paper,
     CircularProgress,
     LinearProgress,
     Chip,
@@ -28,253 +23,455 @@ import {
     DialogContentText,
     DialogActions,
     List as MUIList,
-    FormControl,
-    Select,
-    MenuItem
+    Stack,
+    alpha,
+    Fade,
+    Tooltip,
+    AppBar,
+    Toolbar,
+    ListItemButton,
+    IconButton
 } from '@mui/material';
 import {
     Send as SendIcon,
     Refresh as RefreshIcon,
     Chat as ChatIcon,
-    Close as CloseIcon,
-    Info as InfoIcon,
+    TransferWithinAStation as TransferWithinAStationIcon,
+    Search as SearchIcon,
+    FiberManualRecord as OnlineIcon,
+    Schedule as ScheduleIcon,
+    CheckCircle as CheckCircleIcon,
     AttachFile as AttachFileIcon,
-    FileDownload as FileDownloadIcon,
-    PictureAsPdf as PictureAsPdfIcon,
-    Image as ImageIcon,
-    InsertDriveFile as InsertDriveFileIcon,
-    TransferWithinAStation as TransferWithinAStationIcon
+    GetApp as DownloadIcon,
+    Visibility as ReadIcon,
+    Schedule as PendingIcon,
+    Inbox as AllChatsIcon,
+    Timer as WaitingIcon,
+    PhoneInTalk as ActiveIcon,
+    TaskAlt as CompletedIcon,
+    FilterList as FilterListIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { useSnackbar } from 'notistack';
 import { io } from 'socket.io-client';
-import axios from '../../../axiosConfig';
+import { styled, useTheme } from '@mui/material/styles';
 import Page from '../../../components/Page';
-import Label from '../../../components/Label';
-import Scrollbar from '../../../components/Scrollbar';
+// import Breadcrumbs from '../../../components/Breadcrumbs';
+import { DEV_CONFIG } from '../../../config/development';
+import { useAuth } from '../../../contexts/AuthContext';
+import CreateTicketDialog from '../../../components/_dashboard/service/CreateTicketDialog';
 
-// function TabPanel(props) {
-//     const { children, value, index, ...other } = props;
-//     return (
-//         <div role="tabpanel" hidden={value !== index} {...other}>
-//             {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-//         </div>
-//     );
-// }
+// ----------------------------------------------------------------------
+// Modern Styled Components for Better UX
+// ----------------------------------------------------------------------
 
-// Update the AnalyticsPanel component
-const AnalyticsPanel = () => {
-    const [metrics, setMetrics] = useState({
-        averageResponseTime: 0,
-        resolvedChats: 0,
-        satisfactionRate: 0,
-        activeAgents: 0
-    });
-    const [period, setPeriod] = useState('today');
-    const [loading, setLoading] = useState(false);
-    // const { enqueueSnackbar } = useSnackbar();
+const ChatContainer = styled(Card)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: theme.shadows[4],
+  
+  // Mobile: Full screen height minus header
+  [theme.breakpoints.down('md')]: {
+    height: 'calc(100vh - 200px)',
+    minHeight: 400,
+    borderRadius: 0,
+  },
+  
+  // Tablet: Fixed comfortable height
+  [theme.breakpoints.between('md', 'lg')]: {
+    height: 550,
+    minHeight: 450,
+  },
+  
+  // Desktop: Fixed standard height - ensures input is always visible
+  [theme.breakpoints.up('lg')]: {
+    height: 600,
+    minHeight: 500,
+  },
+}));
 
-    const fetchMetrics = useCallback(async () => {
-        try {
-            setLoading(true);
+const SessionsList = styled(Box)(({ theme }) => ({
+  height: '100%',
+  borderRight: `1px solid ${theme.palette.divider}`,
+  display: 'flex',
+  flexDirection: 'column',
+  
+  // Tablet: Optimize scrolling
+  [theme.breakpoints.between('md', 'lg')]: {
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    '&::-webkit-scrollbar': {
+      width: 8,
+    },
+    '&::-webkit-scrollbar-track': {
+      backgroundColor: theme.palette.grey[200],
+    },
+    '&::-webkit-scrollbar-thumb': {
+      backgroundColor: theme.palette.grey[400],
+      borderRadius: 4,
+    },
+  },
+}));
 
-            // DEVELOPMENT MODE: Use mock data instead of actual API call
-            // In production, you would use:
-            // const response = await axios.get(`/v1/chat/analytics?period=${period}`);
-            // setMetrics(response.data);
+const SessionItem = styled(ListItem, {
+  shouldForwardProp: (prop) => prop !== 'isActive' && prop !== 'hasUnread',
+})(({ theme, isActive, hasUnread }) => ({
+  cursor: 'pointer',
+  borderRadius: theme.shape.borderRadius,
+  transition: 'all 0.2s ease-in-out',
+  position: 'relative',
+  
+  // Mobile & Tablet: Touch-friendly padding
+  [theme.breakpoints.down('lg')]: {
+    margin: theme.spacing(0.5, 1),
+    padding: theme.spacing(2),
+    minHeight: 72, // Touch target minimum
+  },
+  
+  // Desktop: Compact padding
+  [theme.breakpoints.up('lg')]: {
+    margin: theme.spacing(0.5, 1),
+    padding: theme.spacing(1.5),
+  },
+  
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+    transform: 'translateX(4px)',
+  },
+  ...(isActive && {
+    backgroundColor: alpha(theme.palette.primary.main, 0.12),
+    borderLeft: `4px solid ${theme.palette.primary.main}`,
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.primary.main, 0.16),
+    },
+  }),
+  ...(hasUnread && {
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      backgroundColor: theme.palette.error.main,
+    },
+  }),
+}));
 
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 500));
+const MessagesContainer = styled(Box)(({ theme }) => ({
+  // Use CSS Grid for reliable layout - header, messages, input
+  display: 'grid',
+  gridTemplateRows: 'auto 1fr auto', // header auto, messages flex, input auto
+  height: '100%',
+  flex: 1, // Take remaining space in flex parent
+  overflow: 'hidden',
+  minHeight: 0, // Important for nested flex/grid
+}));
 
-            // Mock data based on period
-            const mockData = {
-                today: {
-                    averageResponseTime: 45,
-                    resolvedChats: 12,
-                    satisfactionRate: 94,
-                    activeAgents: 3
-                },
-                week: {
-                    averageResponseTime: 52,
-                    resolvedChats: 87,
-                    satisfactionRate: 89,
-                    activeAgents: 5
-                },
-                month: {
-                    averageResponseTime: 58,
-                    resolvedChats: 324,
-                    satisfactionRate: 91,
-                    activeAgents: 8
-                }
-            };
+const MessagesList = styled(Box)(({ theme }) => ({
+  overflow: 'auto',
+  padding: theme.spacing(1),
+  '&::-webkit-scrollbar': {
+    width: 6,
+  },
+  '&::-webkit-scrollbar-track': {
+    backgroundColor: alpha(theme.palette.grey[500], 0.1),
+  },
+  '&::-webkit-scrollbar-thumb': {
+    backgroundColor: alpha(theme.palette.grey[500], 0.3),
+    borderRadius: 3,
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.grey[500], 0.5),
+    },
+  },
+}));
 
-            setMetrics(mockData[period]);
-        } catch (error) {
-            console.error('Failed to load analytics:', error);
-            // Don't show error notification in development for mock data
-            // enqueueSnackbar('Failed to load analytics data', { variant: 'error' });
-        } finally {
-            setLoading(false);
-        }
-    }, [period]); // Remove enqueueSnackbar from dependencies since we're not using it
+// New: Dedicated input container with guaranteed visibility
+const InputContainer = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2),
+  borderTop: `1px solid ${theme.palette.divider}`,
+  backgroundColor: theme.palette.background.paper,
+  // Ensure it's always visible
+  position: 'relative',
+  zIndex: 10,
+}));
 
-    useEffect(() => {
-        fetchMetrics();
-    }, [fetchMetrics]);
+const MessageBubble = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'isAgent',
+})(({ theme, isAgent }) => ({
+  maxWidth: '70%',
+  marginBottom: theme.spacing(1),
+  alignSelf: isAgent ? 'flex-end' : 'flex-start',
+  padding: theme.spacing(1, 1.5),
+  borderRadius: theme.shape.borderRadius * 2,
+  backgroundColor: isAgent 
+    ? theme.palette.primary.main 
+    : alpha(theme.palette.grey[500], 0.1),
+  color: isAgent 
+    ? theme.palette.primary.contrastText 
+    : theme.palette.text.primary,
+  wordWrap: 'break-word',
+  position: 'relative',
+  
+  // Tablet: Larger text for readability
+  [theme.breakpoints.between('md', 'lg')]: {
+    fontSize: '0.95rem',
+    lineHeight: 1.5,
+    padding: theme.spacing(1.5, 2),
+    maxWidth: '75%',
+  },
+  
+  // Mobile: Even larger
+  [theme.breakpoints.down('md')]: {
+    fontSize: '1rem',
+    lineHeight: 1.6,
+    padding: theme.spacing(1.5, 2),
+    maxWidth: '85%',
+  },
+  
+  '&:hover .message-actions': {
+    opacity: 1,
+  },
+}));
 
-    return (
-        <Card sx={{ mb: 3 }}>
-            <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography variant="h6">Chat Analytics</Typography>
-                    <FormControl variant="standard" sx={{ minWidth: 120 }}>
-                        <Select
-                            value={period}
-                            onChange={(e) => setPeriod(e.target.value)}
-                            size="small"
-                        >
-                            <MenuItem value="today">Today</MenuItem>
-                            <MenuItem value="week">This Week</MenuItem>
-                            <MenuItem value="month">This Month</MenuItem>
-                        </Select>
-                    </FormControl>
-                </Box>
+const TypingIndicator = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  padding: theme.spacing(1, 2),
+  color: theme.palette.text.secondary,
+  fontStyle: 'italic',
+  '& .dot': {
+    width: 4,
+    height: 4,
+    borderRadius: '50%',
+    backgroundColor: theme.palette.text.secondary,
+    margin: '0 1px',
+    animation: 'typing 1.4s infinite ease-in-out',
+    '&:nth-of-type(1)': { animationDelay: '0s' },
+    '&:nth-of-type(2)': { animationDelay: '0.2s' },
+    '&:nth-of-type(3)': { animationDelay: '0.4s' },
+  },
+  '@keyframes typing': {
+    '0%, 80%, 100%': { opacity: 0.3 },
+    '40%': { opacity: 1 },
+  },
+}));
 
-                {loading ? (
-                    <LinearProgress />
-                ) : (
-                    <Grid container spacing={2}>
-                        <Grid item xs={3}>
-                            <Box textAlign="center">
-                                <Typography variant="h4">{metrics.averageResponseTime}s</Typography>
-                                <Typography variant="caption" color="text.secondary">Avg. Response Time</Typography>
-                            </Box>
-                        </Grid>
-                        <Grid item xs={3}>
-                            <Box textAlign="center">
-                                <Typography variant="h4">{metrics.resolvedChats}</Typography>
-                                <Typography variant="caption" color="text.secondary">Resolved Chats</Typography>
-                            </Box>
-                        </Grid>
-                        <Grid item xs={3}>
-                            <Box textAlign="center">
-                                <Typography variant="h4">{metrics.satisfactionRate}%</Typography>
-                                <Typography variant="caption" color="text.secondary">Satisfaction Rate</Typography>
-                            </Box>
-                        </Grid>
-                        <Grid item xs={3}>
-                            <Box textAlign="center">
-                                <Typography variant="h4">{metrics.activeAgents}</Typography>
-                                <Typography variant="caption" color="text.secondary">Active Agents</Typography>
-                            </Box>
-                        </Grid>
-                    </Grid>
-                )}
-            </CardContent>
-        </Card>
-    );
-};
+const StatsCard = styled(Card)(({ theme }) => ({
+  padding: theme.spacing(1.5),
+  textAlign: 'center',
+  height: '100%',
+  transition: 'all 0.3s ease-in-out',
+  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.primary.dark, 0.05)} 100%)`,
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: theme.shadows[4],
+    borderColor: theme.palette.primary.main,
+  },
+}));
+
+const FilterChip = styled(Chip, {
+  shouldForwardProp: (prop) => prop !== 'isActive',
+})(({ theme, isActive }) => ({
+  margin: theme.spacing(0.5),
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  cursor: 'pointer',
+  border: `1.5px solid ${isActive ? theme.palette.primary.main : theme.palette.divider}`,
+  backgroundColor: isActive ? theme.palette.primary.main : theme.palette.background.default,
+  color: isActive ? theme.palette.primary.contrastText : theme.palette.text.primary,
+  fontWeight: isActive ? 600 : 500,
+  
+  // Enhanced hover state
+  '&:hover': {
+    backgroundColor: isActive ? theme.palette.primary.dark : alpha(theme.palette.primary.main, 0.08),
+    borderColor: theme.palette.primary.main,
+    transform: 'translateY(-2px)',
+    boxShadow: isActive 
+      ? `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`
+      : `0 2px 8px ${alpha(theme.palette.primary.main, 0.2)}`,
+  },
+  
+  '& .MuiChip-icon': {
+    color: isActive ? 'inherit' : theme.palette.text.secondary,
+    transition: 'transform 0.3s ease-in-out',
+  },
+  
+  '&:hover .MuiChip-icon': {
+    transform: 'scale(1.1) rotate(5deg)',
+  },
+}));
+
+const ChatHeader = styled(AppBar)(({ theme }) => ({
+  position: 'static',
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  boxShadow: 'none',
+  borderBottom: `1px solid ${theme.palette.divider}`,
+}));
+
+// ----------------------------------------------------------------------
 
 export default function ChatManagement() {
-    // State declarations first
+    const { user, isAuthenticated } = useAuth();
+    const theme = useTheme();
     const [activeSessions, setActiveSessions] = useState([]);
     const [closedSessions, setClosedSessions] = useState([]);
-    const [closedSessionsLoading, setClosedSessionsLoading] = useState(false);
     const [selectedSession, setSelectedSession] = useState(null);
-    const [messages, setMessages] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [sessionsLoading, setSessionsLoading] = useState(false);
+    const [sessionMessages, setSessionMessages] = useState({});
+    const [messageText, setMessageText] = useState('');
     const [tabValue, setTabValue] = useState(0);
-    const [socket, setSocket] = useState(null);
-    const messagesEndRef = useRef(null);
-    const { enqueueSnackbar } = useSnackbar();
+    const [sessionsLoading, setSessionsLoading] = useState(false);
+    const [closedSessionsLoading, setClosedSessionsLoading] = useState(false);
     const [unreadSessions, setUnreadSessions] = useState(new Set());
-    const [cannedResponses, setCannedResponses] = useState([
-        { id: '1', title: 'Greeting', content: 'Hello! How can I help you today?' },
-        { id: '2', title: 'Thanks', content: 'Thank you for reaching out to us. I appreciate your patience.' },
-        { id: '3', title: 'Closing', content: 'Is there anything else I can help you with today?' },
-        { id: '4', title: 'Wait', content: 'Please give me a moment to check that for you.' },
-        // Add more predefined responses as needed
-    ]);
-    const [typingUsers, setTypingUsers] = useState({});
-    const [showCustomerInfo, setShowCustomerInfo] = useState(false);
-    const [customerData, setCustomerData] = useState(null);
-    const [customerDataLoading, setCustomerDataLoading] = useState(false);
+    const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+    const [availableAgents, setAvailableAgents] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [realTimeStats, setRealTimeStats] = useState({
+        activeChats: 0,
+        pendingChats: 0,
+        totalAgentsOnline: 0,
+        totalMessagesToday: 0,
+        averageWaitTime: 0,
+        customerSatisfactionRate: 0
+    });
+    const [analyticsLoading, setAnalyticsLoading] = useState(false);
+    const [agentTyping, setAgentTyping] = useState({});
+    const [customerTyping, setCustomerTyping] = useState({});
+    const [fileUpload, setFileUpload] = useState({ progress: 0, fileName: null });
+    const [createTicketDialogOpen, setCreateTicketDialogOpen] = useState(false);
 
-    // Add state for file handling
-    const [fileUploading, setFileUploading] = useState(false);
+    const socketRef = useRef(null);
+    const { enqueueSnackbar } = useSnackbar();
     const fileInputRef = useRef(null);
 
+    // Enhanced Message Component with status and file support
+    const EnhancedMessage = ({ message, index }) => {
+        // Handle both old format (sender: 'agent') and new format (sender: { role: 'agent' })
+        const isAgent = message.sender === 'agent' || message.sender?.role === 'agent';
+        
+        const getMessageStatus = () => {
+            if (message.readBy && message.readBy.length > 0) {
+                return <ReadIcon sx={{ fontSize: 12, color: 'success.main' }} />;
+            }
+            if (message.delivered) {
+                return <CheckCircleIcon sx={{ fontSize: 12, color: 'info.main' }} />;
+            }
+            return <PendingIcon sx={{ fontSize: 12, color: 'warning.main' }} />;
+        };
 
-    // Add states for transfer dialog
-    const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-    // eslint-disable-next-line no-unused-vars
-    const [availableAgents, setAvailableAgents] = useState([
-        { id: 'agent1', name: 'John Smith', department: 'Technical Support' },
-        { id: 'agent2', name: 'Maria Garcia', department: 'Billing' },
-        { id: 'agent3', name: 'Alex Johnson', department: 'Sales' }
-    ]);
+        const handleFileDownload = (file) => {
+            const link = document.createElement('a');
+            link.href = `/uploads/chat/${file.filename}`;
+            link.download = file.originalName;
+            link.click();
+        };
 
-    const SOCKET_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
+        return (
+            <MessageBubble key={message._id || index} isAgent={isAgent}>
+                {message.files && message.files.length > 0 && (
+                    <Box sx={{ mb: 1 }}>
+                        {message.files.map((file, fileIndex) => (
+                            <Box
+                                key={fileIndex}
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    backgroundColor: 'rgba(255,255,255,0.1)',
+                                    borderRadius: 1,
+                                    p: 1,
+                                    mb: 0.5,
+                                    cursor: 'pointer'
+                                }}
+                                onClick={() => handleFileDownload(file)}
+                            >
+                                <AttachFileIcon sx={{ fontSize: 16, mr: 1 }} />
+                                <Typography variant="caption" sx={{ flex: 1 }}>
+                                    {file.originalName}
+                                </Typography>
+                                <DownloadIcon sx={{ fontSize: 14 }} />
+                            </Box>
+                        ))}
+                    </Box>
+                )}
+                
+                <Typography variant="body2">
+                    {message.content || message.text || message.message || '[No content]'}
+                </Typography>
+                
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    mt: 0.5 
+                }}>
+                    <Typography variant="caption" color="text.secondary">
+                        {formatTimeAgo(message.timestamp || message.createdAt)}
+                    </Typography>
+                    {isAgent && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                            {getMessageStatus()}
+                        </Box>
+                    )}
+                </Box>
+            </MessageBubble>
+        );
+    };
 
+    // Helper functions
+    const formatTimeAgo = useCallback((date) => {
+        if (!date) return 'Unknown';
+        try {
+            return format(new Date(date), 'HH:mm');
+        } catch {
+            return 'Invalid date';
+        }
+    }, []);
+
+    const getFilteredSessions = useCallback(() => {
+        let sessions = [];
+        
+        switch (tabValue) {
+            case 0: // All sessions
+                sessions = [...activeSessions, ...closedSessions];
+                break;
+            case 1: // Pending
+                sessions = activeSessions.filter(s => s.status === 'pending');
+                break;
+            case 2: // Active
+                sessions = activeSessions.filter(s => s.status === 'active');
+                break;
+            case 3: // Closed
+                sessions = closedSessions;
+                break;
+            default:
+                sessions = activeSessions;
+        }
+
+        if (searchTerm) {
+            sessions = sessions.filter(session => 
+                session.customerInfo?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                session.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                session.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                session.sessionId?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+
+        return sessions;
+    }, [activeSessions, closedSessions, tabValue, searchTerm]);
+
+    // API functions
     const fetchActiveSessions = useCallback(async () => {
         try {
             setSessionsLoading(true);
-
-            // DEVELOPMENT MODE: Use mock data
-            // In production: const response = await axios.get('/v1/chat/sessions/active');
-
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            // Mock active sessions data
-            const mockActiveSessions = [
-                {
-                    sessionId: 'session-1',
-                    status: 'pending',
-                    startedAt: new Date(Date.now() - 5 * 60000).toISOString(),
-                    lastActivity: new Date().toISOString(),
-                    customer: {
-                        id: 'cust-1',
-                        name: 'John Doe',
-                        email: 'john@example.com',
-                        isAnonymous: false
-                    }
-                },
-                {
-                    sessionId: 'session-2',
-                    status: 'active',
-                    startedAt: new Date(Date.now() - 25 * 60000).toISOString(),
-                    lastActivity: new Date(Date.now() - 2 * 60000).toISOString(),
-                    customer: {
-                        id: 'cust-2',
-                        name: 'Jane Smith',
-                        email: 'jane@example.com',
-                        isAnonymous: false
-                    },
-                    agent: {
-                        id: 'agent-1',
-                        name: 'Support Agent'
-                    }
-                },
-                {
-                    sessionId: 'session-3',
-                    status: 'pending',
-                    startedAt: new Date(Date.now() - 2 * 60000).toISOString(),
-                    lastActivity: new Date(Date.now() - 1 * 60000).toISOString(),
-                    customer: {
-                        id: 'anonymous',
-                        name: 'Guest User',
-                        isAnonymous: true
-                    }
-                }
-            ];
-
-            setActiveSessions(mockActiveSessions);
+            const response = await axiosInstance.get('/v1/chat/sessions/active');
+            setActiveSessions(response.data || []);
         } catch (error) {
             console.error('Error fetching active sessions:', error);
-            enqueueSnackbar('Failed to load active chat sessions', { variant: 'error' });
+            enqueueSnackbar('Failed to fetch active sessions', { variant: 'error' });
         } finally {
             setSessionsLoading(false);
         }
@@ -283,977 +480,995 @@ export default function ChatManagement() {
     const fetchClosedSessions = useCallback(async () => {
         try {
             setClosedSessionsLoading(true);
-
-            // DEVELOPMENT MODE: Use mock data
-            // In production: const response = await axios.get('/v1/chat/sessions/closed');
-
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            // Mock closed sessions data
-            const mockClosedSessions = [
-                {
-                    sessionId: 'session-4',
-                    status: 'closed',
-                    startedAt: new Date(Date.now() - 120 * 60000).toISOString(),
-                    lastActivity: new Date(Date.now() - 90 * 60000).toISOString(),
-                    endedAt: new Date(Date.now() - 90 * 60000).toISOString(),
-                    customer: {
-                        id: 'cust-3',
-                        name: 'Mike Johnson',
-                        email: 'mike@example.com',
-                        isAnonymous: false
-                    },
-                    agent: {
-                        id: 'agent-2',
-                        name: 'Support Agent'
-                    }
-                },
-                {
-                    sessionId: 'session-5',
-                    status: 'closed',
-                    startedAt: new Date(Date.now() - 24 * 60 * 60000).toISOString(),
-                    lastActivity: new Date(Date.now() - 23 * 60 * 60000).toISOString(),
-                    endedAt: new Date(Date.now() - 23 * 60 * 60000).toISOString(),
-                    customer: {
-                        id: 'cust-4',
-                        name: 'Sarah Williams',
-                        email: 'sarah@example.com',
-                        isAnonymous: false
-                    },
-                    agent: {
-                        id: 'agent-1',
-                        name: 'Support Agent'
-                    }
-                }
-            ];
-
-            setClosedSessions(mockClosedSessions);
+            const response = await axiosInstance.get('/v1/chat/sessions/closed');
+            setClosedSessions(response.data || []);
         } catch (error) {
             console.error('Error fetching closed sessions:', error);
-            enqueueSnackbar('Failed to load closed chat sessions', { variant: 'error' });
+            enqueueSnackbar('Failed to fetch closed sessions', { variant: 'error' });
         } finally {
             setClosedSessionsLoading(false);
         }
     }, [enqueueSnackbar]);
 
-    // Update the fetchCannedResponses function
-    const fetchCannedResponses = useCallback(async () => {
+    const fetchRealTimeStats = useCallback(async () => {
         try {
-            // For now, use mock data
-            setCannedResponses([
-                { id: '1', title: 'Greeting', content: 'Hello! How can I help you today?' },
-                { id: '2', title: 'Thanks', content: 'Thank you for reaching out to us. I appreciate your patience.' },
-                { id: '3', title: 'Closing', content: 'Is there anything else I can help you with today?' },
-                { id: '4', title: 'Wait', content: 'Please give me a moment to check that for you.' },
-                // Add more predefined responses as needed
-            ]);
-
-            // In future, this would be:
-            // const response = await axios.get('/chat/canned-responses');
-            // setCannedResponses(response.data);
+            setAnalyticsLoading(true);
+            const response = await axiosInstance.get('/v1/chat/analytics/realtime');
+            if (response.data && response.data.success) {
+                setRealTimeStats(response.data.data);
+            }
         } catch (error) {
-            console.error('Error fetching canned responses:', error);
+            console.error('Error fetching real-time stats:', error);
+            // Don't show error notification for analytics as it's not critical
+        } finally {
+            setAnalyticsLoading(false);
         }
     }, []);
 
-    // Define these functions with useCallback before they're used
-    const fetchChatHistory = useCallback(async (sessionId) => {
+    const fetchSessionMessages = useCallback(async (sessionId) => {
         try {
-            setLoading(true);
-
-            // DEVELOPMENT MODE: Use mock data
-            // In production: const response = await axios.get(`/v1/chat/history/${sessionId}`);
-
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Mock messages for the selected session
-            const now = new Date();
-            const mockMessages = [
-                {
-                    sessionId: sessionId,
-                    sender: {
-                        id: 'customer',
-                        name: selectedSession?.customer.name || 'Customer',
-                        role: 'customer'
-                    },
-                    content: 'Hello, I need help with my account',
-                    timestamp: new Date(now.getTime() - 10 * 60000).toISOString()
-                },
-                {
-                    sessionId: sessionId,
-                    sender: {
-                        id: 'agent',
-                        name: 'Support Agent',
-                        role: 'agent'
-                    },
-                    content: 'Hello! I\'d be happy to help. Could you please provide your account details?',
-                    timestamp: new Date(now.getTime() - 9 * 60000).toISOString()
-                },
-                {
-                    sessionId: sessionId,
-                    sender: {
-                        id: 'customer',
-                        name: selectedSession?.customer.name || 'Customer',
-                        role: 'customer'
-                    },
-                    content: 'My account number is ACC-12345',
-                    timestamp: new Date(now.getTime() - 8 * 60000).toISOString()
-                },
-                {
-                    sessionId: sessionId,
-                    sender: {
-                        id: 'agent',
-                        name: 'Support Agent',
-                        role: 'agent'
-                    },
-                    content: 'Thank you. I can see your account now. What specific issue are you experiencing?',
-                    timestamp: new Date(now.getTime() - 7 * 60000).toISOString()
-                }
-            ];
-
-            setMessages(mockMessages);
+            const response = await axiosInstance.get(`/v1/chat/history/${sessionId}`);
+            setSessionMessages(prev => ({
+                ...prev,
+                [sessionId]: response.data || []
+            }));
         } catch (error) {
-            console.error('Error fetching chat history:', error);
-            enqueueSnackbar('Failed to load chat history', { variant: 'error' });
-        } finally {
-            setLoading(false);
-        }
-    }, [enqueueSnackbar, selectedSession]);
-
-    const fetchCustomerDetails = useCallback(async (customerId) => {
-        if (!customerId || customerId === 'anonymous') return;
-
-        try {
-            setCustomerDataLoading(true);
-            // This would connect to your CRM or customer database
-            // For now we'll use a mock response
-            // const response = await axios.get(`/customers/${customerId}`);
-
-            // Simulate API call with timeout
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            setCustomerData({
-                id: customerId,
-                joinDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), // 90 days ago
-                orders: [
-                    { id: 'ORD-123456', date: new Date(), total: 79.99, status: 'completed' },
-                    { id: 'ORD-123123', date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), total: 129.99, status: 'completed' }
-                ],
-                activeServices: [
-                    { id: 'SVC-1', name: 'Broadband 100Mbps' }
-                ],
-                supportHistory: [
-                    { date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), issue: 'Connection issue', resolved: true }
-                ]
-            });
-        } catch (error) {
-            console.error('Error fetching customer details:', error);
-            enqueueSnackbar('Failed to load customer details', { variant: 'error' });
-        } finally {
-            setCustomerDataLoading(false);
+            console.error('Error fetching session messages:', error);
+            enqueueSnackbar('Failed to fetch session messages', { variant: 'error' });
         }
     }, [enqueueSnackbar]);
 
-    // Now you can safely define handleSelectSession which uses these functions
+    const handleSendMessage = useCallback(async () => {
+        if (!messageText.trim() || !selectedSession) return;
+
+        try {
+            // Auto-assign agent if session is pending
+            if (selectedSession.status === 'pending') {
+                await axiosInstance.put(`/v1/chat/session/${selectedSession.sessionId}/assign`);
+                
+                // Update local session status
+                setActiveSessions(prev => prev.map(session => 
+                    session.sessionId === selectedSession.sessionId 
+                        ? { ...session, status: 'active', agent: { 
+                            id: user?.id || user?._id, 
+                            name: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.name || 'Agent',
+                            assignedAt: new Date()
+                        }}
+                        : session
+                ));
+                
+                // Update selected session
+                setSelectedSession(prev => prev ? { 
+                    ...prev, 
+                    status: 'active',
+                    agent: {
+                        id: user?.id || user?._id,
+                        name: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.name || 'Agent',
+                        assignedAt: new Date()
+                    }
+                } : null);
+            }
+
+            const messageData = {
+                _id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                sessionId: selectedSession.sessionId,
+                content: messageText,
+                sender: {
+                    id: user?.id || user?._id || 'anonymous-agent',
+                    name: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.name || 'Agent',
+                    role: 'agent'
+                },
+                timestamp: new Date()
+            };
+
+            // Immediately add to local state for instant UI feedback
+            setSessionMessages(prev => ({
+                ...prev,
+                [selectedSession.sessionId]: [...(prev[selectedSession.sessionId] || []), messageData]
+            }));
+            
+            // Send via Socket.IO for real-time delivery
+            if (socketRef.current && DEV_CONFIG.ENABLE_SOCKET) {
+                socketRef.current.emit('send_message', messageData);
+            } else {
+                // Fallback to API if socket not available
+                await axiosInstance.post(`/v1/chat/history/${selectedSession.sessionId}`, messageData);
+                fetchSessionMessages(selectedSession.sessionId);
+            }
+            
+            setMessageText('');
+        } catch (error) {
+            console.error('Error sending message:', error);
+            enqueueSnackbar('Failed to send message', { variant: 'error' });
+        }
+    }, [messageText, selectedSession, fetchSessionMessages, enqueueSnackbar, user]);
+
+    const handleFileUpload = useCallback(async (event) => {
+        const file = event.target.files[0];
+        if (!file || !selectedSession) return;
+
+        try {
+            setFileUpload({ progress: 0, fileName: file.name });
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('sessionId', selectedSession.sessionId);
+
+            const response = await axiosInstance.post('/v1/chat/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setFileUpload({ progress, fileName: file.name });
+                }
+            });
+
+            if (response.data && response.data.success) {
+                const fileMessage = {
+                    sessionId: selectedSession.sessionId,
+                    content: `[File: ${file.name}]`,
+                    sender: {
+                        id: user?.id || user?._id || 'anonymous-agent',
+                        name: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.name || 'Agent',
+                        role: 'agent'
+                    },
+                    timestamp: new Date(),
+                    files: [response.data.fileInfo],
+                    messageType: 'file'
+                };
+
+                if (socketRef.current && DEV_CONFIG.ENABLE_SOCKET) {
+                    socketRef.current.emit('send_message', fileMessage);
+                }
+
+                enqueueSnackbar('File uploaded successfully', { variant: 'success' });
+                setFileUpload({ progress: 0, fileName: null }); // Reset upload state
+            }
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            enqueueSnackbar('Failed to upload file', { variant: 'error' });
+            setFileUpload({ progress: 0, fileName: null }); // Reset on error
+        }
+
+        // Reset file input
+    
+        event.target.value = '';
+    }, [selectedSession, enqueueSnackbar, user]);
+
+    const handleTyping = useCallback((isTyping) => {
+        if (socketRef.current && selectedSession) {
+            socketRef.current.emit('typing', {
+                sessionId: selectedSession.sessionId,
+                from: 'agent',
+                isTyping
+            });
+        }
+    }, [selectedSession]);
+
     const handleSelectSession = useCallback((session) => {
         setSelectedSession(session);
-        fetchChatHistory(session.sessionId);
-
-        // Clear unread state when selecting a session
+        
+        // Join the specific session room for real-time updates
+        if (socketRef.current && DEV_CONFIG.ENABLE_SOCKET) {
+            socketRef.current.emit('join_session', { sessionId: session.sessionId });
+        }
+        
+        // Fetch messages if not already loaded
+        if (!sessionMessages[session.sessionId]) {
+            fetchSessionMessages(session.sessionId);
+        }
+        
+        // Remove from unread sessions
         setUnreadSessions(prev => {
             const updated = new Set(prev);
             updated.delete(session.sessionId);
             return updated;
         });
+    }, [sessionMessages, fetchSessionMessages]);
 
-        // Fetch customer details if available
-        if (session.customer && session.customer.id && session.customer.id !== 'anonymous') {
-            fetchCustomerDetails(session.customer.id);
-        }
-    }, [fetchChatHistory, fetchCustomerDetails]);
-
-    // Initialize socket connection
-    useEffect(() => {
-        const newSocket = io(SOCKET_URL, {
-            auth: {
-                token: localStorage.getItem('accessToken')
-            }
-        });
-
-        newSocket.on('connect', () => {
-            console.log('Connected to chat server');
-        });
-
-        newSocket.on('new_message', (msg) => {
-            if (selectedSession && msg.sessionId === selectedSession.sessionId) {
-                setMessages(prev => [...prev, msg]);
-            } else {
-                // Mark session as unread if it's not the currently selected one
-                setUnreadSessions(prev => new Set(prev).add(msg.sessionId));
-            }
-
-            // Refresh sessions list to update last activity
-            fetchActiveSessions();
-        });
-
-        // Event listeners to your useEffect where socket is initialized
-        newSocket.on('new_chat_session', (session) => {
-            // New session to the list without needing a full refresh
-            setActiveSessions(prev => [session, ...prev]);
-
-            // Show notification
-            enqueueSnackbar('New chat session received!', {
-                variant: 'info',
-                action: (key) => (
-                    <Button size="small" onClick={() => handleSelectSession(session)}>
-                        View
-                    </Button>
-                )
-            });
-        });
-
-        newSocket.on('session_updated', (data) => {
-            // Refresh the sessions list when any session is updated
-            fetchActiveSessions();
-        });
-
-        newSocket.on('user_typing', (data) => {
-            if (data.sessionId === selectedSession?.sessionId) {
-                setTypingUsers(prev => ({
-                    ...prev,
-                    [data.from]: data.isTyping
-                }));
-
-                // Auto-clear typing indicator after 3 seconds in case the event gets lost
-                setTimeout(() => {
-                    setTypingUsers(prev => ({
-                        ...prev,
-                        [data.from]: false
-                    }));
-                }, 3000);
-            }
-        });
-
-        newSocket.on('connect_error', (error) => {
-            console.error('Socket connection error:', error);
-            enqueueSnackbar('Connection to chat server failed', { variant: 'error' });
-        });
-
-        setSocket(newSocket);
-
-        return () => {
-            newSocket.disconnect();
-        };
-    }, [selectedSession, fetchActiveSessions, SOCKET_URL, handleSelectSession, enqueueSnackbar]);
-
-    // Send a message
-    const handleSendMessage = () => {
-        if (!newMessage.trim() || !selectedSession || !socket) return;
-
-        const messageData = {
-            sessionId: selectedSession.sessionId,
-            sender: {
-                id: 'agent', // Replace with actual agent ID
-                name: 'Support Agent', // Replace with actual agent name
-                role: 'agent'
-            },
-            content: newMessage,
-            timestamp: new Date()
-        };
-
-        socket.emit('send_message', messageData);
-        setMessages(prev => [...prev, messageData]);
-        setNewMessage('');
-    };
-
-    // Add file upload handler
-    const handleFileUpload = async (event) => {
-        const file = event.target.files?.[0];
-        if (!file || !selectedSession || !socket) return;
-
-        // Add file size check
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            enqueueSnackbar('File size must be less than 5MB', { variant: 'error' });
-            return;
-        }
-
-        // Create FormData object
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('sessionId', selectedSession.sessionId);
-
-        try {
-            setFileUploading(true);
-
-            // Upload the file to your server
-            const response = await axios.post('/chat/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
-
-            // Create a file message
-            const fileMessage = {
-                sessionId: selectedSession.sessionId,
-                sender: {
-                    id: 'agent',
-                    name: 'Support Agent',
-                    role: 'agent'
-                },
-                content: `[File: ${file.name}]`,
-                fileData: {
-                    fileName: file.name,
-                    fileType: file.type,
-                    fileSize: file.size,
-                    fileUrl: response.data.fileUrl
-                },
-                timestamp: new Date()
-            };
-
-            // Send the message through socket
-            socket.emit('send_message', fileMessage);
-
-            // Add to local messages state
-            setMessages(prev => [...prev, fileMessage]);
-
-            enqueueSnackbar('File uploaded successfully', { variant: 'success' });
-        } catch (error) {
-            console.error('Error uploading file:', error);
-            enqueueSnackbar('Failed to upload file', { variant: 'error' });
-        } finally {
-            setFileUploading(false);
-            // Clear the file input
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-        }
-    };
-
-    // Assign yourself to a chat
-    const handleAssignChat = async () => {
+    const handleAssignChat = useCallback(async () => {
         if (!selectedSession) return;
 
         try {
-            await axios.put(`/chat/session/${selectedSession.sessionId}/assign`);
-            fetchActiveSessions();
-            enqueueSnackbar('Chat assigned to you', { variant: 'success' });
+            const response = await axiosInstance.put(`/v1/chat/session/${selectedSession.sessionId}/assign`);
+            enqueueSnackbar('Chat assigned successfully', { variant: 'success' });
+            
+            const updatedAgent = response.data?.agent || {
+                id: user?.id || user?._id,
+                name: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.name || 'Agent',
+                assignedAt: new Date()
+            };
+            
+            // Update selectedSession with new status to show message input immediately
+            setSelectedSession(prev => ({
+                ...prev,
+                status: 'active',
+                agent: updatedAgent
+            }));
+            
+            // Also update the session in activeSessions list to keep UI consistent
+            setActiveSessions(prev => prev.map(session => 
+                session.sessionId === selectedSession.sessionId
+                    ? { ...session, status: 'active', agent: updatedAgent }
+                    : session
+            ));
+            
+            // Don't call fetchActiveSessions() here - we've already updated local state
+            // This prevents async re-fetch from causing UI flickering
         } catch (error) {
             console.error('Error assigning chat:', error);
             enqueueSnackbar('Failed to assign chat', { variant: 'error' });
         }
-    };
+    }, [selectedSession, enqueueSnackbar, user]);
 
-    // Close a chat session
-    const handleCloseSession = async () => {
+    const handleCloseChat = useCallback(async () => {
         if (!selectedSession) return;
 
         try {
-            await axios.put(`/chat/session/${selectedSession.sessionId}/close`);
-            fetchActiveSessions();
+            await axiosInstance.put(`/v1/chat/session/${selectedSession.sessionId}/close`);
+            enqueueSnackbar('Chat closed successfully', { variant: 'success' });
             setSelectedSession(null);
-            setMessages([]);
-            enqueueSnackbar('Chat session closed', { variant: 'success' });
+            fetchActiveSessions();
+            fetchClosedSessions();
         } catch (error) {
-            console.error('Error closing chat session:', error);
-            enqueueSnackbar('Failed to close chat session', { variant: 'error' });
+            enqueueSnackbar('Failed to close chat', { variant: 'error' });
         }
-    };
+    }, [selectedSession, fetchActiveSessions, fetchClosedSessions, enqueueSnackbar]);
 
-    // Handle chat transfer
-    const handleChatTransfer = async (targetAgentId) => {
+    const handleTransferDialogOpen = useCallback(async () => {
+        setTransferDialogOpen(true);
+        
         try {
-            await axios.post(`/chat/transfer/${selectedSession.sessionId}`, {
-                toAgentId: targetAgentId
+            // Fetch available staff members for transfer
+            // Since the API doesn't support comma-separated values, we'll fetch all and filter
+            const response = await axiosInstance.get('/v1/user');
+            const allUsers = response.data || [];
+            
+            // Filter for staff members (admin, superadmin, support)
+            const staffUsers = allUsers.filter(user => 
+                ['admin', 'superadmin', 'support'].includes(user.accountType)
+            );
+            
+            setAvailableAgents(staffUsers.map(user => ({
+                id: user.userId || user._id,
+                name: user.name || `${user.firstName} ${user.lastName}`,
+                department: user.department || user.accountType,
+                status: user.status || 'active'
+            })));
+        } catch (error) {
+            console.error('Error fetching available agents:', error);
+            // Fallback to demo data if API fails
+            setAvailableAgents([
+                { id: 'demo1', name: 'Support Agent 1', department: 'Customer Support', status: 'active' },
+                { id: 'demo2', name: 'Support Agent 2', department: 'Technical Support', status: 'active' },
+            ]);
+        }
+    }, []);
+
+    const handleTransferDialogClose = useCallback(() => {
+        setTransferDialogOpen(false);
+    }, []);
+
+    const handleTransferToAgent = useCallback(async (agentId) => {
+        if (!selectedSession) return;
+
+        try {
+            await axiosInstance.post(`/v1/chat/transfer/${selectedSession.sessionId}`, {
+                toAgentId: agentId
             });
             enqueueSnackbar('Chat transferred successfully', { variant: 'success' });
+            setTransferDialogOpen(false);
+            fetchActiveSessions();
         } catch (error) {
             console.error('Error transferring chat:', error);
             enqueueSnackbar('Failed to transfer chat', { variant: 'error' });
         }
-    };
+    }, [selectedSession, fetchActiveSessions, enqueueSnackbar]);
 
-    // Handle tab change
-    const handleTabChange = (event, newValue) => {
-        setTabValue(newValue);
-    };
-
-    // Scroll to bottom when messages update
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    // Initial data fetch
-    useEffect(() => {
-        if (tabValue === 0) {
-            fetchActiveSessions();
+    // Handle create ticket dialog
+    const handleOpenCreateTicket = useCallback(() => {
+        if (selectedSession) {
+            setCreateTicketDialogOpen(true);
         } else {
-            fetchClosedSessions();
+            enqueueSnackbar('Please select a chat session first', { variant: 'info' });
         }
-    }, [tabValue, fetchActiveSessions, fetchClosedSessions]);
+    }, [selectedSession, enqueueSnackbar]);
 
-    useEffect(() => {
-        fetchCannedResponses();
-    }, [fetchCannedResponses]);
+    const handleCloseCreateTicket = useCallback(() => {
+        setCreateTicketDialogOpen(false);
+    }, []);
 
-    // Add this in your first useEffect for initial data loading
-    useEffect(() => {
-        // Initial data fetch based on selected tab
-        if (tabValue === 0) {
-            fetchActiveSessions();
-        } else {
-            fetchClosedSessions();
-        }
-
-        // Show development mode notification
-        if (process.env.NODE_ENV !== 'production') {
-            enqueueSnackbar('Running in development mode with mock data', {
-                variant: 'info',
-                autoHideDuration: 5000,
-                anchorOrigin: { vertical: 'top', horizontal: 'center' }
-            });
-        }
-    }, [tabValue, fetchActiveSessions, fetchClosedSessions, enqueueSnackbar]);
-
-    // Add a FileMessage component (you can place this outside the main component)
-    const FileMessage = ({ fileData }) => {
-        // Determine icon based on file type
-        let FileIcon = InsertDriveFileIcon;
-        if (fileData.fileType.startsWith('image/')) {
-            FileIcon = ImageIcon;
-        } else if (fileData.fileType === 'application/pdf') {
-            FileIcon = PictureAsPdfIcon;
-        }
-
-        const handleDownload = () => {
-            window.open(fileData.fileUrl, '_blank');
-        };
-
-        return (
-            <Box sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
-                <FileIcon sx={{ mr: 1 }} />
-                <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="body2" noWrap>{fileData.fileName}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        {Math.round(fileData.fileSize / 1024)} KB
-                    </Typography>
-                </Box>
-                <IconButton onClick={handleDownload} size="small">
-                    <FileDownloadIcon fontSize="small" />
-                </IconButton>
-            </Box>
+    const handleTicketCreated = useCallback((ticket) => {
+        enqueueSnackbar(
+            `Ticket ${ticket.ticketNumber} created successfully!`,
+            { 
+                variant: 'success',
+                autoHideDuration: 5000
+            }
         );
-    };
+        // Optionally refresh sessions or add ticket reference to session
+        if (selectedSession) {
+            setSelectedSession(prev => ({
+                ...prev,
+                linkedTicket: ticket.ticketNumber
+            }));
+        }
+    }, [selectedSession, enqueueSnackbar]);
 
-    // Handle transfer dialog open
-    const handleTransferDialogOpen = () => {
-        setTransferDialogOpen(true);
-    };
+    // Initialize
+    useEffect(() => {
+        fetchActiveSessions();
+        fetchClosedSessions();
+        fetchRealTimeStats();
+        
+        // Set up real-time stats refresh
+        const statsInterval = setInterval(fetchRealTimeStats, 30000); // Refresh every 30 seconds
+        
+        return () => clearInterval(statsInterval);
+    }, [fetchActiveSessions, fetchClosedSessions, fetchRealTimeStats]);
 
-    // Handle transfer dialog close
-    const handleTransferDialogClose = () => {
-        setTransferDialogOpen(false);
-    };
+    // Socket connection
+    useEffect(() => {
+        if (DEV_CONFIG.ENABLE_SOCKET) {
+            const socketUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
+            
+            // Parse token - it may be stored as JSON string (with quotes)
+            let authToken = localStorage.getItem('accessToken');
+            if (authToken) {
+                try {
+                    authToken = JSON.parse(authToken);
+                } catch (e) {
+                    // Token is already a raw string, use as-is
+                }
+            }
+            
+            console.log('[ChatManagement] Socket auth token:', authToken ? `${authToken.substring(0, 20)}...` : 'null');
+            
+            socketRef.current = io(socketUrl, {
+                auth: {
+                    token: authToken
+                },
+                transports: ['polling', 'websocket']
+            });
+            
+            socketRef.current.on('connect', () => {
+                console.log('✅ ChatManagement: Connected to socket server');
+                console.log('📋 ChatManagement: Automatically joined staff room (by role)');
+                
+                // Join current session room if viewing a session
+                if (selectedSession) {
+                    console.log(`🔄 ChatManagement: Joining session room: ${selectedSession.sessionId}`);
+                    socketRef.current.emit('join_session', { sessionId: selectedSession.sessionId });
+                }
+            });
 
-    // Handle transfer to agent
-    const handleTransferToAgent = (agentId) => {
-        handleChatTransfer(agentId);
-        handleTransferDialogClose();
-    };
+            socketRef.current.on('connect_error', (error) => {
+                console.error('❌ Socket connection error:', error);
+                enqueueSnackbar('Real-time connection failed. Using fallback mode.', { variant: 'warning' });
+            });
+
+            socketRef.current.on('disconnect', (reason) => {
+
+                if (reason === 'io server disconnect') {
+                    // Server disconnected - will auto-reconnect
+                    enqueueSnackbar('Connection lost. Attempting to reconnect...', { variant: 'info' });
+                }
+            });
+
+            socketRef.current.on('new_message', (messageData) => {
+                console.log('📥 ChatManagement: Received new_message:', {
+                    sessionId: messageData.sessionId,
+                    sender: messageData.sender,
+                    contentPreview: messageData.content?.substring(0, 30)
+                });
+                
+                // Avoid duplicating messages we just sent
+                setSessionMessages(prev => {
+                    const existingMessages = prev[messageData.sessionId] || [];
+                    const isDuplicate = existingMessages.some(msg => 
+                        msg.content === messageData.content && 
+                        Math.abs(new Date(msg.timestamp) - new Date(messageData.timestamp)) < 1000
+                    );
+                    
+                    if (isDuplicate) {
+
+                        return prev;
+                    }
+                    
+                    return {
+                        ...prev,
+                        [messageData.sessionId]: [...existingMessages, messageData]
+                    };
+                });
+                
+                // Mark as unread if not currently viewing this session
+                if (messageData.sessionId !== selectedSession?.sessionId) {
+                    setUnreadSessions(prev => new Set([...prev, messageData.sessionId]));
+                    const customerName = messageData.customerInfo?.name || messageData.customer?.name || 'Customer';
+                    enqueueSnackbar(`New message from ${customerName}`, { 
+                        variant: 'info',
+                        autoHideDuration: 3000 
+                    });
+                }
+                
+                // Clear typing indicator for this user
+                if (messageData.sender === 'customer') {
+                    setCustomerTyping(prev => ({
+                        ...prev,
+                        [messageData.sessionId]: false
+                    }));
+                }
+            });
+
+            socketRef.current.on('user_typing', (data) => {
+
+                if (data.from === 'customer') {
+                    setCustomerTyping(prev => ({
+                        ...prev,
+                        [data.sessionId]: data.isTyping
+                    }));
+                } else if (data.from === 'agent') {
+                    setAgentTyping(prev => ({
+                        ...prev,
+                        [data.sessionId]: data.isTyping
+                    }));
+                }
+            });
+
+            socketRef.current.on('new_chat_session', (sessionData) => {
+                console.log('🆕 ChatManagement: New chat session created:', {
+                    sessionId: sessionData.sessionId,
+                    customer: sessionData.customer?.name
+                });
+                
+                setActiveSessions(prev => [sessionData, ...prev]);
+                const customerName = sessionData.customerInfo?.name || sessionData.customer?.name || 'Customer';
+                enqueueSnackbar(`New chat session from ${customerName}`, { 
+                    variant: 'info',
+                    autoHideDuration: 5000 
+                });
+            });
+
+            socketRef.current.on('session_closed', (sessionData) => {
+                console.log('📢 Session closed event received:', sessionData);
+                
+                // Move from active to closed sessions
+                setActiveSessions(prev => prev.filter(s => s.sessionId !== sessionData.sessionId));
+                setClosedSessions(prev => [{...sessionData, status: 'closed'}, ...prev]);
+                
+                // If the closed session is currently selected, update it
+                setSelectedSession(prev => {
+                    if (prev && prev.sessionId === sessionData.sessionId) {
+                        return { ...prev, status: 'closed', endedAt: sessionData.closedAt };
+                    }
+                    return prev;
+                });
+                
+                // Show notification based on who closed the chat
+                const sessionLabel = sessionData.sessionId?.slice(-6) || '';
+                if (sessionData.closedBy === 'customer') {
+                    enqueueSnackbar(`Customer ended chat session ...${sessionLabel}`, { 
+                        variant: 'info',
+                        autoHideDuration: 5000 
+                    });
+                } else if (sessionData.closedBy === 'agent') {
+                    enqueueSnackbar(`Chat session ...${sessionLabel} closed successfully`, { 
+                        variant: 'success',
+                        autoHideDuration: 3000 
+                    });
+                }
+            });
+
+            return () => {
+                if (socketRef.current) {
+                    // Clean up all event listeners to prevent memory leaks
+                    socketRef.current.off('connect');
+                    socketRef.current.off('connect_error');
+                    socketRef.current.off('disconnect');
+                    socketRef.current.off('new_message');
+                    socketRef.current.off('user_typing');
+                    socketRef.current.off('new_chat_session');
+                    socketRef.current.off('session_closed');
+                    socketRef.current.disconnect();
+                }
+            };
+        }
+    }, [selectedSession, enqueueSnackbar]);
+
+    // Authentication check - after all hooks
+    if (!isAuthenticated) {
+        return (
+            <Page title="Chat Management">
+                <Container maxWidth="lg">
+                    <Paper sx={{ p: 3, textAlign: 'center' }}>
+                        <Typography variant="h6" color="error">
+                            Authentication required to access chat management
+                        </Typography>
+                    </Paper>
+                </Container>
+            </Page>
+        );
+    }
 
     return (
-        <Page title="Chat Management">
-            <Container maxWidth="xl">
-                <Box sx={{ mb: 5 }}>
-                    <Typography variant="h4" gutterBottom>
+        <Page title="Chat Management | NEXC Construction Platform">
+            <Container maxWidth="xl" sx={{ py: 1 }}>
+                {/* Compact Header */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
                         Chat Management
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        Manage customer support chat sessions
-                    </Typography>
+                    <Stack direction="row" spacing={1}>
+                        <Button
+                            variant="outlined"
+                            startIcon={<RefreshIcon />}
+                            onClick={fetchActiveSessions}
+                            size="small"
+                        >
+                            Refresh
+                        </Button>
+                        <Button
+                            variant="contained"
+                            startIcon={<ChatIcon />}
+                            onClick={handleOpenCreateTicket}
+                            size="small"
+                            disabled={!selectedSession}
+                        >
+                            New Ticket
+                        </Button>
+                    </Stack>
                 </Box>
 
-                <AnalyticsPanel />
-
-                {/* Session Statistics */}
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12} md={4}>
-                        <Card sx={{ bgcolor: 'primary.lighter', height: '100%' }}>
-                            <CardContent>
-                                <Typography variant="h3" color="primary.main">
-                                    {activeSessions.filter(s => s.status === 'pending').length}
-                                </Typography>
-                                <Typography variant="subtitle2" sx={{ mt: 1 }}>
-                                    Pending Sessions
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                        <Card sx={{ bgcolor: 'success.lighter', height: '100%' }}>
-                            <CardContent>
-                                <Typography variant="h3" color="success.main">
-                                    {activeSessions.filter(s => s.status === 'active').length}
-                                </Typography>
-                                <Typography variant="subtitle2" sx={{ mt: 1 }}>
-                                    Active Sessions
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                        <Card sx={{ bgcolor: 'warning.lighter', height: '100%' }}>
-                            <CardContent>
-                                <Typography variant="h3" color="warning.main">
-                                    {activeSessions.length}
-                                </Typography>
-                                <Typography variant="subtitle2" sx={{ mt: 1 }}>
-                                    Total Open Sessions
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                </Grid>
-
-                <Card>
-                    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                        <Tabs value={tabValue} onChange={handleTabChange}>
-                            <Tab label="Active Chats" />
-                            <Tab label="Closed Chats" />
-                        </Tabs>
-                    </Box>
-
-                    <Grid container spacing={0}>
-                        {/* Left sidebar - Sessions list */}
-                        <Grid item xs={12} md={4} lg={3} sx={{ borderRight: '1px solid', borderColor: 'divider' }}>
-                            <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography variant="subtitle1">Chat Sessions</Typography>
-                                <IconButton onClick={fetchActiveSessions}>
-                                    <RefreshIcon />
-                                </IconButton>
-                            </Box>
-                            <Divider />
-
-                            {tabValue === 0 ? (
-                                sessionsLoading ? (
-                                    <LinearProgress />
-                                ) : (
-                                    <Scrollbar sx={{ height: { md: 'calc(100vh - 400px)' } }}>
-                                        <List>
-                                            {activeSessions.length > 0 ? (
-                                                activeSessions.map(session => (
-                                                    <ListItem
-                                                        key={session.sessionId}
-                                                        button
-                                                        selected={selectedSession?.sessionId === session.sessionId}
-                                                        onClick={() => handleSelectSession(session)}
-                                                        divider
-                                                    >
-                                                        <ListItemAvatar>
-                                                            <Badge
-                                                                color={
-                                                                    unreadSessions.has(session.sessionId)
-                                                                        ? 'error'
-                                                                        : session.status === 'pending'
-                                                                            ? 'warning'
-                                                                            : 'primary'
-                                                                }
-                                                                variant="dot"
-                                                                overlap="circular"
-                                                            >
-                                                                <Avatar>
-                                                                    {session.customer.name.charAt(0).toUpperCase()}
-                                                                </Avatar>
-                                                            </Badge>
-                                                        </ListItemAvatar>
-                                                        <ListItemText
-                                                            primary={session.customer.name}
-                                                            secondary={
-                                                                <>
-                                                                    <Typography variant="caption" component="span" sx={{ display: 'block' }}>
-                                                                        {format(new Date(session.lastActivity), 'HH:mm - dd MMM yy')}
-                                                                    </Typography>
-                                                                    <Label color={session.status === 'pending' ? 'error' : 'success'}>
-                                                                        {session.status}
-                                                                    </Label>
-                                                                </>
-                                                            }
-                                                        />
-                                                    </ListItem>
-                                                ))
-                                            ) : (
-                                                <ListItem>
-                                                    <ListItemText
-                                                        primary="No active sessions"
-                                                        secondary="All chat sessions will appear here"
-                                                        sx={{ textAlign: 'center', py: 4 }}
-                                                    />
-                                                </ListItem>
-                                            )}
-                                        </List>
-                                    </Scrollbar>
-                                )
-                            ) : (
-                                closedSessionsLoading ? ( // Use closedSessionsLoading here
-                                    <LinearProgress />
-                                ) : (
-                                    <Scrollbar sx={{ height: { md: 'calc(100vh - 400px)' } }}>
-                                        <List>
-                                            {closedSessions.length > 0 ? (
-                                                closedSessions.map(session => (
-                                                    <ListItem
-                                                        key={session.sessionId}
-                                                        button
-                                                        selected={selectedSession?.sessionId === session.sessionId}
-                                                        onClick={() => handleSelectSession(session)}
-                                                        divider
-                                                    >
-                                                        <ListItemAvatar>
-                                                            <Badge
-                                                                color={session.status === 'pending' ? 'error' : 'primary'}
-                                                                variant="dot"
-                                                                overlap="circular"
-                                                            >
-                                                                <Avatar>
-                                                                    {session.customer.name.charAt(0).toUpperCase()}
-                                                                </Avatar>
-                                                            </Badge>
-                                                        </ListItemAvatar>
-                                                        <ListItemText
-                                                            primary={session.customer.name}
-                                                            secondary={
-                                                                <>
-                                                                    <Typography variant="caption" component="span" sx={{ display: 'block' }}>
-                                                                        {format(new Date(session.lastActivity), 'HH:mm - dd MMM yy')}
-                                                                    </Typography>
-                                                                    <Label color={session.status === 'pending' ? 'error' : 'success'}>
-                                                                        {session.status}
-                                                                    </Label>
-                                                                </>
-                                                            }
-                                                        />
-                                                    </ListItem>
-                                                ))
-                                            ) : (
-                                                <ListItem>
-                                                    <ListItemText
-                                                        primary="No closed sessions"
-                                                        secondary="All closed chat sessions will appear here"
-                                                        sx={{ textAlign: 'center', py: 4 }}
-                                                    />
-                                                </ListItem>
-                                            )}
-                                        </List>
-                                    </Scrollbar>
-                                )
-                            )}
-                        </Grid>
-
-                        {/* Right side - Chat messages */}
-                        <Grid item xs={12} md={8} lg={9}>
-                            {selectedSession ? (
-                                <Box sx={{ display: 'flex', flexDirection: 'column', height: { md: 'calc(100vh - 400px)' } }}>
-                                    {/* Chat header */}
-                                    <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <Box>
-                                                <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
-                                                    {selectedSession.customer.name}
-                                                    {selectedSession.customer.isAnonymous ? (
-                                                        <Chip size="small" label="Guest" sx={{ ml: 1 }} color="default" />
-                                                    ) : (
-                                                        <Chip size="small" label="Registered" sx={{ ml: 1 }} color="success" />
-                                                    )}
-                                                </Typography>
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', mt: 0.5 }}>
-                                                    {selectedSession.customer.email && (
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            Email: {selectedSession.customer.email}
-                                                        </Typography>
-                                                    )}
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        Started: {format(new Date(selectedSession.startedAt), 'PPpp')}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-
-                                            <IconButton size="small" onClick={() => setShowCustomerInfo(prev => !prev)}>
-                                                <InfoIcon color={showCustomerInfo ? "primary" : "action"} />
-                                            </IconButton>
-                                        </Box>
-
-                                        <Box>
-                                            {selectedSession.status === 'pending' && (
-                                                <Button
-                                                    variant="contained"
-                                                    color="primary"
-                                                    size="small"
-                                                    onClick={handleAssignChat}
-                                                    sx={{ mr: 1 }}
-                                                >
-                                                    Take Chat
-                                                </Button>
-                                            )}
-
-                                            {/* Add transfer button for active chats */}
-                                            {selectedSession.status === 'active' && (
-                                                <Button
-                                                    variant="outlined"
-                                                    color="info"
-                                                    size="small"
-                                                    onClick={handleTransferDialogOpen}
-                                                    startIcon={<TransferWithinAStationIcon />}
-                                                    sx={{ mr: 1 }}
-                                                >
-                                                    Transfer
-                                                </Button>
-                                            )}
-
-                                            <Button
-                                                variant="outlined"
-                                                color="error"
-                                                size="small"
-                                                onClick={handleCloseSession}
-                                                startIcon={<CloseIcon />}
-                                            >
-                                                End Chat
-                                            </Button>
-                                        </Box>
-                                    </Box>
-
-                                    {/* Customer info panel */}
-                                    {showCustomerInfo && (
-                                        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
-                                            <Typography variant="subtitle2" gutterBottom>Customer Information</Typography>
-
-                                            {customerDataLoading ? (
-                                                <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                                                    <CircularProgress size={24} />
-                                                </Box>
-                                            ) : customerData ? (
-                                                <>
-                                                    <Grid container spacing={2}>
-                                                        <Grid item xs={12} sm={6}>
-                                                            <Typography variant="body2">
-                                                                <strong>Customer Since:</strong> {customerData.joinDate ? format(new Date(customerData.joinDate), 'PP') : 'N/A'}
-                                                            </Typography>
-                                                        </Grid>
-                                                        <Grid item xs={12} sm={6}>
-                                                            <Typography variant="body2">
-                                                                <strong>Order History:</strong> {customerData.orders?.length || 0} orders
-                                                            </Typography>
-                                                        </Grid>
-                                                        <Grid item xs={12}>
-                                                            <Typography variant="body2" gutterBottom>
-                                                                <strong>Active Services:</strong>
-                                                            </Typography>
-                                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                                {customerData.activeServices?.map(service => (
-                                                                    <Chip
-                                                                        key={service.id}
-                                                                        label={service.name}
-                                                                        size="small"
-                                                                        color="primary"
-                                                                    />
-                                                                ))}
-                                                                {!customerData.activeServices?.length && 'None'}
-                                                            </Box>
-                                                        </Grid>
-                                                    </Grid>
-                                                </>
-                                            ) : (
-                                                <Typography variant="body2" color="text.secondary">
-                                                    {selectedSession.customer.isAnonymous ?
-                                                        'Limited information available for guest users' :
-                                                        'No additional customer information found'}
-                                                </Typography>
-                                            )}
-                                        </Box>
+                {/* Modern Session Statistics - Compact */}
+                <Fade in timeout={600}>
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid item xs={6} sm={6} md={3}>
+                            <StatsCard>
+                                <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                                    <ScheduleIcon color="warning" fontSize="small" />
+                                    {analyticsLoading ? (
+                                        <CircularProgress size={20} color="warning" />
+                                    ) : (
+                                        <Typography variant="h5" color="warning.main" sx={{ fontWeight: 700 }}>
+                                            {realTimeStats.pendingChats || activeSessions.filter(s => s.status === 'pending').length}
+                                        </Typography>
                                     )}
+                                </Stack>
+                                <Typography variant="caption" color="text.secondary">
+                                    Pending
+                                </Typography>
+                            </StatsCard>
+                        </Grid>
+                        <Grid item xs={6} sm={6} md={3}>
+                            <StatsCard>
+                                <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                                    <OnlineIcon color="success" fontSize="small" />
+                                    <Typography variant="h5" color="success.main" sx={{ fontWeight: 700 }}>
+                                        {realTimeStats.activeChats || activeSessions.filter(s => s.status === 'active').length}
+                                    </Typography>
+                                </Stack>
+                                <Typography variant="caption" color="text.secondary">
+                                    Active
+                                </Typography>
+                            </StatsCard>
+                        </Grid>
+                        <Grid item xs={6} sm={6} md={3}>
+                            <StatsCard>
+                                <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                                    <ChatIcon color="primary" fontSize="small" />
+                                    <Typography variant="h5" color="primary.main" sx={{ fontWeight: 700 }}>
+                                        {realTimeStats.totalMessagesToday || activeSessions.length}
+                                    </Typography>
+                                </Stack>
+                                <Typography variant="caption" color="text.secondary">
+                                    {realTimeStats.totalMessagesToday ? 'Messages' : 'Sessions'}
+                                </Typography>
+                            </StatsCard>
+                        </Grid>
+                        <Grid item xs={6} sm={6} md={3}>
+                            <StatsCard>
+                                <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                                    <CheckCircleIcon color="info" fontSize="small" />
+                                    <Typography variant="h5" color="info.main" sx={{ fontWeight: 700 }}>
+                                        {realTimeStats.customerSatisfactionRate || closedSessions.length}
+                                    </Typography>
+                                </Stack>
+                                <Typography variant="caption" color="text.secondary">
+                                    Resolved
+                                </Typography>
+                            </StatsCard>
+                        </Grid>
+                    </Grid>
+                </Fade>
 
-                                    {/* Messages area */}
-                                    <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2, bgcolor: 'background.default' }}>
-                                        {loading ? (
-                                            <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
-                                                <CircularProgress />
+                {/* Session Filters */}
+                <Fade in timeout={900}>
+                    <Box sx={{ mb: 2 }}>
+                        <Box sx={{
+                            p: 1.5,
+                            borderRadius: 2,
+                            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.info.main, 0.04)} 100%)`,
+                            border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                            backdropFilter: 'blur(8px)'
+                        }}>
+                            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                                <Typography 
+                                    variant="subtitle2" 
+                                    sx={{ 
+                                        fontWeight: 600,
+                                        color: 'text.primary',
+                                        mr: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 0.8
+                                    }}
+                                >
+                                    <FilterListIcon sx={{ fontSize: 20 }} />
+                                    Filter Sessions:
+                                </Typography>
+                                <FilterChip 
+                                    label="All Sessions" 
+                                    isActive={tabValue === 0}
+                                    onClick={() => setTabValue(0)}
+                                    icon={<AllChatsIcon />}
+                                    variant="outlined"
+                                />
+                                <FilterChip 
+                                    label="Pending" 
+                                    isActive={tabValue === 1}
+                                    onClick={() => setTabValue(1)}
+                                    icon={<WaitingIcon />}
+                                    variant="outlined"
+                                />
+                                <FilterChip 
+                                    label="Active" 
+                                    isActive={tabValue === 2}
+                                    onClick={() => setTabValue(2)}
+                                    icon={<ActiveIcon />}
+                                    variant="outlined"
+                                />
+                                <FilterChip 
+                                    label="Closed" 
+                                    isActive={tabValue === 3}
+                                    onClick={() => setTabValue(3)}
+                                    icon={<CompletedIcon />}
+                                    variant="outlined"
+                                />
+                            </Stack>
+                        </Box>
+                    </Box>
+                </Fade>
+
+                {/* Main Chat Interface - Modernized */}
+                <Fade in timeout={1200}>
+                    <ChatContainer>
+                        <Grid container spacing={0} sx={{ height: '100%' }}>
+                            {/* Sessions List - Wider on tablet for better usability */}
+                            <Grid item xs={12} sm={5} md={4} lg={3}>
+                                <SessionsList>
+                                    <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                                        <Stack direction="row" alignItems="center" spacing={1}>
+                                            <SearchIcon color="action" />
+                                            <TextField
+                                                fullWidth
+                                                placeholder="Search sessions..."
+                                                size="small"
+                                                variant="outlined"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                InputProps={{
+                                                    sx: { 
+                                                        bgcolor: 'background.paper',
+                                                        '& .MuiOutlinedInput-notchedOutline': {
+                                                            border: 'none'
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </Stack>
+                                    </Box>
+                                    
+                                    <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+                                        {sessionsLoading || closedSessionsLoading ? (
+                                            <Box sx={{ p: 3, textAlign: 'center' }}>
+                                                <CircularProgress size={24} />
                                             </Box>
                                         ) : (
-                                            messages.map((msg, index) => (
-                                                <Box
-                                                    key={index}
-                                                    sx={{
-                                                        display: 'flex',
-                                                        flexDirection: msg.sender.role === 'agent' ? 'row-reverse' : 'row',
-                                                        mb: 2
-                                                    }}
-                                                >
-                                                    <Avatar
-                                                        sx={{
-                                                            width: 32,
-                                                            height: 32,
-                                                            mr: msg.sender.role === 'agent' ? 0 : 1,
-                                                            ml: msg.sender.role === 'agent' ? 1 : 0,
-                                                            bgcolor: msg.sender.role === 'agent' ? 'primary.main' : 'grey.300'
-                                                        }}
+                                            <List>
+                                                {getFilteredSessions().map((session) => (
+                                                    <SessionItem
+                                                        key={session.sessionId}
+                                                        isActive={selectedSession?.sessionId === session.sessionId}
+                                                        hasUnread={unreadSessions.has(session.sessionId)}
+                                                        onClick={() => handleSelectSession(session)}
                                                     >
-                                                        {msg.sender.name.charAt(0).toUpperCase()}
-                                                    </Avatar>
-                                                    <Box sx={{ maxWidth: '70%' }}>
-                                                        <Paper
-                                                            sx={{
-                                                                p: 1.5,
-                                                                bgcolor: msg.sender.role === 'agent' ? 'primary.light' : 'background.paper',
-                                                                color: msg.sender.role === 'agent' ? 'primary.contrastText' : 'text.primary',
-                                                                borderRadius: 2
-                                                            }}
-                                                        >
-                                                            {msg.fileData ? (
-                                                                <FileMessage fileData={msg.fileData} />
-                                                            ) : (
-                                                                <Typography variant="body2">{msg.content}</Typography>
-                                                            )}
-                                                        </Paper>
-                                                        <Typography
-                                                            variant="caption"
-                                                            color="text.secondary"
-                                                            sx={{
-                                                                display: 'block',
-                                                                mt: 0.5,
-                                                                textAlign: msg.sender.role === 'agent' ? 'right' : 'left'
-                                                            }}
-                                                        >
-                                                            {format(new Date(msg.timestamp), 'HH:mm')}
+                                                        <ListItemAvatar>
+                                                            <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                                                {session.customerInfo?.name?.[0] || session.customerName?.[0] || session.customer?.name?.[0] || 'U'}
+                                                            </Avatar>
+                                                        </ListItemAvatar>
+                                                        <ListItemText
+                                                            primary={
+                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                    <Typography component="span" variant="body2" sx={{ fontWeight: 600 }}>
+                                                                        {session.customerInfo?.name || session.customerName || session.customer?.name || 'Anonymous User'}
+                                                                    </Typography>
+                                                                    {session.isFirstChat === false ? (
+                                                                        <Chip
+                                                                            size="small"
+                                                                            label="Returning"
+                                                                            variant="filled"
+                                                                            color="info"
+                                                                            sx={{ height: 20, fontSize: '0.7rem' }}
+                                                                        />
+                                                                    ) : (
+                                                                        <Chip
+                                                                            size="small"
+                                                                            label="New"
+                                                                            variant="filled"
+                                                                            color="success"
+                                                                            sx={{ height: 20, fontSize: '0.7rem' }}
+                                                                        />
+                                                                    )}
+                                                                </Box>
+                                                            }
+                                                            secondary={
+                                                                <Box component="span" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                                                                    <Typography component="span" variant="caption" color="text.secondary" noWrap>
+                                                                        {session.lastMessage?.content || session.lastMessage?.text || session.lastMessage || 'No messages yet'}
+                                                                    </Typography>
+                                                                    <Chip
+                                                                        size="small"
+                                                                        label={session.status}
+                                                                        color={
+                                                                            session.status === 'active' ? 'success' : 
+                                                                            session.status === 'pending' ? 'warning' : 'default'
+                                                                        }
+                                                                    />
+                                                                </Box>
+                                                            }
+                                                        />
+                                                    </SessionItem>
+                                                ))}
+                                                {getFilteredSessions().length === 0 && (
+                                                    <Box sx={{ p: 4, textAlign: 'center' }}>
+                                                        <ChatIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2, opacity: 0.3 }} />
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            No sessions found
                                                         </Typography>
                                                     </Box>
-                                                </Box>
-                                            ))
+                                                )}
+                                            </List>
                                         )}
-                                        {Object.keys(typingUsers).some(userId => typingUsers[userId]) && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', p: 1 }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                                    <span
-                                                        style={{
-                                                            width: '6px',
-                                                            height: '6px',
-                                                            background: 'gray',
-                                                            borderRadius: '50%',
-                                                            margin: '0 2px',
-                                                            animation: 'pulse 1s infinite',
-                                                            animationDelay: '0s',
-                                                        }}
-                                                    />
-                                                    <span
-                                                        style={{
-                                                            width: '6px',
-                                                            height: '6px',
-                                                            background: 'gray',
-                                                            borderRadius: '50%',
-                                                            margin: '0 2px',
-                                                            animation: 'pulse 1s infinite',
-                                                            animationDelay: '0.2s'
-                                                        }}
-                                                    />
-                                                    <span
-                                                        style={{
-                                                            width: '6px',
-                                                            height: '6px',
-                                                            background: 'gray',
-                                                            borderRadius: '50%',
-                                                            margin: '0 2px',
-                                                            animation: 'pulse 1s infinite',
-                                                            animationDelay: '0.4s'
-                                                        }}
-                                                    />
+                                    </Box>
+                                </SessionsList>
+                            </Grid>
+
+                            {/* Chat Messages Area - Adjust for tablet layout */}
+                            <Grid item xs={12} sm={7} md={8} lg={9} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                {selectedSession ? (
+                                    <MessagesContainer>
+                                        {/* Chat Header */}
+                                        <ChatHeader position="static" elevation={0}>
+                                            <Toolbar>
+                                                <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                                                    {selectedSession.customerInfo?.name?.[0] || selectedSession.customerName?.[0] || selectedSession.customer?.name?.[0] || 'U'}
+                                                </Avatar>
+                                                <Box sx={{ flexGrow: 1 }}>
+                                                    <Typography variant="h6">
+                                                        {selectedSession.customerInfo?.name || selectedSession.customerName || selectedSession.customer?.name || 'Anonymous User'}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Session ID: {selectedSession.sessionId}
+                                                    </Typography>
                                                 </Box>
-                                                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                                                    Customer is typing...
+                                                <Stack direction="row" spacing={1}>
+                                                    {selectedSession.status === 'pending' && (
+                                                        <Button
+                                                            variant="contained"
+                                                            size="small"
+                                                            onClick={handleAssignChat}
+                                                        >
+                                                            Take Chat
+                                                        </Button>
+                                                    )}
+                                                    {selectedSession.status === 'active' && (
+                                                        <>
+                                                            <Button
+                                                                variant="outlined"
+                                                                size="small"
+                                                                onClick={handleTransferDialogOpen}
+                                                                startIcon={<TransferWithinAStationIcon />}
+                                                            >
+                                                                Transfer
+                                                            </Button>
+                                                            <Button
+                                                                variant="outlined"
+                                                                color="error"
+                                                                size="small"
+                                                                onClick={handleCloseChat}
+                                                            >
+                                                                Close
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                    {selectedSession.status === 'closed' && (
+                                                        <Box sx={{
+                                                            px: 2,
+                                                            py: 1,
+                                                            bgcolor: 'success.light',
+                                                            borderRadius: 1,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: 1
+                                                        }}>
+                                                            <CheckCircleIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                                                            <Typography variant="caption" sx={{ color: 'success.dark', fontWeight: 600 }}>
+                                                                Chat Closed
+                                                            </Typography>
+                                                        </Box>
+                                                    )}
+                                                </Stack>
+                                            </Toolbar>
+                                        </ChatHeader>
+
+                                        {/* Messages List */}
+                                        <MessagesList>
+                                            
+                                            {sessionMessages[selectedSession.sessionId]?.length > 0 ? (
+                                                <>
+                                                    {sessionMessages[selectedSession.sessionId].map((message, index) => (
+                                                        <EnhancedMessage key={message._id || index} message={message} index={index} />
+                                                    ))}
+                                                    
+                                                    {/* Typing Indicators */}
+                                                    {customerTyping[selectedSession.sessionId] && (
+                                                        <TypingIndicator>
+                                                            <Typography variant="caption" sx={{ mr: 1 }}>
+                                                                {selectedSession.customerInfo?.name || 'Customer'} is typing
+                                                            </Typography>
+                                                            <Box className="dot" />
+                                                            <Box className="dot" />
+                                                            <Box className="dot" />
+                                                        </TypingIndicator>
+                                                    )}
+                                                    
+                                                    {agentTyping[selectedSession.sessionId] && (
+                                                        <TypingIndicator>
+                                                            <Typography variant="caption" sx={{ mr: 1 }}>
+                                                                Agent is typing
+                                                            </Typography>
+                                                            <Box className="dot" />
+                                                            <Box className="dot" />
+                                                            <Box className="dot" />
+                                                        </TypingIndicator>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                                                    <ChatIcon sx={{ fontSize: 48, opacity: 0.3, mb: 2 }} />
+                                                    <Typography variant="body2">
+                                                        No messages in this conversation yet
+                                                    </Typography>
+                                                </Box>
+                                            )}
+                                        </MessagesList>
+
+                                        {/* Message Input - Using dedicated InputContainer for guaranteed visibility */}
+                                        {selectedSession && selectedSession.status !== 'closed' && (
+                                            <InputContainer>
+                                                {/* File Upload Progress */}
+                                                {fileUpload.fileName && (
+                                                    <Box sx={{ mb: 2 }}>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Uploading: {fileUpload.fileName}
+                                                        </Typography>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                                                            <Box sx={{ width: '100%', mr: 1 }}>
+                                                                <LinearProgress variant="determinate" value={fileUpload.progress} />
+                                                            </Box>
+                                                            <Box sx={{ minWidth: 35 }}>
+                                                                <Typography variant="body2" color="text.secondary">
+                                                                    {fileUpload.progress}%
+                                                                </Typography>
+                                                            </Box>
+                                                        </Box>
+                                                    </Box>
+                                                )}
+                                                
+                                                <Stack direction="row" spacing={1} alignItems="flex-end">
+                                                    <input
+                                                        type="file"
+                                                        ref={fileInputRef}
+                                                        style={{ display: 'none' }}
+                                                        onChange={handleFileUpload}
+                                                        accept="image/*,.pdf,.doc,.docx,.txt"
+                                                    />
+                                                    
+                                                    <Tooltip title="Attach file">
+                                                        <IconButton
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            sx={{ mr: 1 }}
+                                                        >
+                                                            <AttachFileIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    
+                                                    <TextField
+                                                        fullWidth
+                                                        multiline
+                                                        maxRows={3}
+                                                        placeholder="Type your message..."
+                                                        value={messageText}
+                                                        onChange={(e) => {
+                                                            setMessageText(e.target.value);
+                                                            // Send typing indicator
+                                                            if (e.target.value.length > 0) {
+                                                                handleTyping(true);
+                                                            } else {
+                                                                handleTyping(false);
+                                                            }
+                                                        }}
+                                                        onKeyPress={(e) => {
+                                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                                e.preventDefault();
+                                                                handleTyping(false);
+                                                                handleSendMessage();
+                                                            }
+                                                        }}
+                                                        onFocus={() => handleTyping(true)}
+                                                        onBlur={() => handleTyping(false)}
+                                                    />
+                                                    <Button
+                                                        variant="contained"
+                                                        onClick={() => {
+                                                            handleTyping(false);
+                                                            handleSendMessage();
+                                                        }}
+                                                        disabled={!messageText.trim()}
+                                                        startIcon={<SendIcon />}
+                                                    >
+                                                        Send
+                                                    </Button>
+                                                </Stack>
+                                            </InputContainer>
+                                        )}
+                                        
+                                        {/* Closed session message */}
+                                        {selectedSession && selectedSession.status === 'closed' && (
+                                            <InputContainer sx={{ bgcolor: 'grey.100', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <CheckCircleIcon sx={{ color: 'success.main' }} />
+                                                <Typography variant="body2" color="text.secondary">
+                                                    This session is closed. Message input is not available for closed sessions.
                                                 </Typography>
-                                            </Box>
+                                            </InputContainer>
                                         )}
-                                        <div ref={messagesEndRef} />
-                                    </Box>
-
-                                    <Box sx={{ p: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-                                        <Typography variant="caption" color="text.secondary">Quick Responses</Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                                            {cannedResponses.map(response => (
-                                                <Chip
-                                                    key={response.id}
-                                                    label={response.title}
-                                                    size="small"
-                                                    onClick={() => setNewMessage(response.content)}
-                                                    sx={{ cursor: 'pointer' }}
-                                                />
-                                            ))}
-                                        </Box>
-                                    </Box>
-
-                                    {/* Message input */}
-                                    <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex' }}>
-                                        <input
-                                            type="file"
-                                            ref={fileInputRef}
-                                            style={{ display: 'none' }}
-                                            onChange={handleFileUpload}
-                                        />
-                                        <IconButton
-                                            onClick={() => fileInputRef.current?.click()}
-                                            disabled={fileUploading || selectedSession?.status !== 'active'}
-                                            sx={{ mr: 1 }}
-                                        >
-                                            <AttachFileIcon />
-                                        </IconButton>
-                                        <TextField
-                                            fullWidth
-                                            placeholder="Type your message..."
-                                            variant="outlined"
-                                            value={newMessage}
-                                            onChange={(e) => setNewMessage(e.target.value)}
-                                            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                                            disabled={selectedSession.status !== 'active' || loading || fileUploading}
-                                            size="small"
-                                            onFocus={() => socket.emit('typing', {
-                                                sessionId: selectedSession.sessionId,
-                                                isTyping: true,
-                                                from: 'agent'
-                                            })}
-                                            onBlur={() => socket.emit('typing', {
-                                                sessionId: selectedSession.sessionId,
-                                                isTyping: false,
-                                                from: 'agent'
-                                            })}
-                                        />
-                                        <Button
-                                            variant="contained"
-                                            color="primary"
-                                            endIcon={<SendIcon />}
-                                            onClick={handleSendMessage}
-                                            disabled={(!newMessage.trim() || selectedSession.status !== 'active' || loading)}
-                                            sx={{ ml: 1 }}
-                                        >
-                                            Send
-                                        </Button>
-                                    </Box>
-                                </Box>
-                            ) : (
-                                <Box sx={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Paper sx={{ p: 4, textAlign: 'center', maxWidth: 400 }}>
-                                        <ChatIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+                                    </MessagesContainer>
+                                ) : (
+                                    <Box
+                                        sx={{
+                                            height: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexDirection: 'column',
+                                            color: 'text.secondary'
+                                        }}
+                                    >
+                                        <ChatIcon sx={{ fontSize: 64, mb: 2, opacity: 0.3 }} />
                                         <Typography variant="h6" gutterBottom>
-                                            No chat selected
+                                            Select a chat session
                                         </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Select a chat session from the list to view the conversation
+                                        <Typography variant="body2">
+                                            Choose a session from the left to start managing customer conversations
                                         </Typography>
-                                    </Paper>
-                                </Box>
-                            )}
+                                    </Box>
+                                )}
+                            </Grid>
                         </Grid>
-                    </Grid>
-                </Card>
+                    </ChatContainer>
+                </Fade>
 
-                {/* Add the transfer dialog */}
+                {/* Transfer Dialog */}
                 <Dialog
                     open={transferDialogOpen}
                     onClose={handleTransferDialogClose}
@@ -1267,25 +1482,48 @@ export default function ChatManagement() {
                             Select an agent to transfer this conversation to:
                         </DialogContentText>
                         <MUIList sx={{ pt: 1 }}>
-                            {availableAgents.map((agent) => (
-                                <ListItem button onClick={() => handleTransferToAgent(agent.id)} key={agent.id}>
-                                    <ListItemAvatar>
-                                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                                            {agent.name.charAt(0)}
-                                        </Avatar>
-                                    </ListItemAvatar>
+                            {availableAgents.length === 0 ? (
+                                <ListItem>
                                     <ListItemText
-                                        primary={agent.name}
-                                        secondary={agent.department}
+                                        primary="No agents available"
+                                        secondary="All agents may be offline or busy"
                                     />
                                 </ListItem>
-                            ))}
+                            ) : (
+                                availableAgents.map((agent) => (
+                                    <ListItemButton 
+                                        onClick={() => handleTransferToAgent(agent.id)} 
+                                        key={agent.id}
+                                        disabled={agent.status !== 'active'}
+                                    >
+                                        <ListItemAvatar>
+                                            <Avatar sx={{ 
+                                                bgcolor: agent.status === 'active' ? 'success.main' : 'grey.500'
+                                            }}>
+                                                {agent.name.charAt(0)}
+                                            </Avatar>
+                                        </ListItemAvatar>
+                                        <ListItemText
+                                            primary={agent.name}
+                                            secondary={`${agent.department} • ${agent.status === 'active' ? 'Available' : 'Unavailable'}`}
+                                        />
+                                    </ListItemButton>
+                                ))
+                            )}
                         </MUIList>
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleTransferDialogClose}>Cancel</Button>
                     </DialogActions>
                 </Dialog>
+
+                {/* Create Ticket Dialog */}
+                <CreateTicketDialog
+                    open={createTicketDialogOpen}
+                    onClose={handleCloseCreateTicket}
+                    sessionData={selectedSession}
+                    onTicketCreated={handleTicketCreated}
+                />
             </Container>
         </Page>
     );

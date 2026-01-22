@@ -105,7 +105,9 @@ const TimelineTrack = styled("div")(({ theme }) => ({
   }
 }));
 
-const TimelineProgress = styled("div")(({ theme, progress }) => ({
+const TimelineProgress = styled("div", {
+  shouldForwardProp: (prop) => prop !== 'progress',
+})(({ theme, progress }) => ({
   position: "absolute",
   top: 0,
   left: 0,
@@ -118,7 +120,9 @@ const TimelineProgress = styled("div")(({ theme, progress }) => ({
   }
 }));
 
-const StepButton = styled(IconButton)(({ theme, active }) => ({
+const StepButton = styled(IconButton, {
+  shouldForwardProp: (prop) => prop !== 'active',
+})(({ theme, active }) => ({
   width: 64,
   height: 64,
   borderRadius: "50%",
@@ -160,7 +164,9 @@ const StepPill = styled("span")(({ theme }) => ({
   marginBottom: theme.spacing(2),
 }));
 
-const ServiceIconContainer = styled(Box)(({ theme, color }) => ({
+const ServiceIconContainer = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'color',
+})(({ theme, color }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

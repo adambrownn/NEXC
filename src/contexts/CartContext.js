@@ -2,6 +2,8 @@ import { createContext, useState, useContext, useEffect, useCallback, useMemo } 
 import CartBucketService from '../services/bucket';
 import UserService from '../services/user';
 import PaymentService from '../services/payment';
+import axiosInstance from '../axiosConfig';
+import { prepareOrderData } from '../utils/orderHelpers';
 
 // Create context with initial empty values, now including checkout-related state
 const CartContext = createContext({
@@ -271,31 +273,33 @@ export function CartProvider({ children }) {
     // Order operations
     const createOrder = useCallback(async (orderData) => {
         return performOperation(async () => {
-            // This would typically call an API endpoint to create an order
-            // For now, we'll just simulate it with localStorage
-            const order = {
-                id: `order-${Date.now()}`,
-                items: [...items],
-                customer: { ...customer },
-                billing: { ...billingInfo },
-                payment: { ...paymentInfo },
-                configurations: { ...configurations },
-                totalAmount,
-                status: 'created',
-                createdAt: new Date().toISOString()
-            };
+            // Prepare standardized order data
+            const preparedOrder = prepareOrderData({
+                orderType: 'ONLINE',
+                customer: customer,
+                customerId: customer?._id || customer?.id,
+                items: items,
+                configurations: configurations,
+                paymentStatus: orderData?.paymentStatus || 2, // 2 = paid (after Stripe success)
+                paymentMethod: orderData?.paymentMethod || 'stripe',
+                status: 'pending'
+            });
+
+            // Create order via API
+            const response = await axiosInstance.post('/v1/orders', preparedOrder);
             
-            // Store in localStorage for demo purposes
-            const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-            orders.push(order);
-            localStorage.setItem('orders', JSON.stringify(orders));
+            if (!response.data || !response.data.success) {
+                throw new Error(response.data?.error || 'Failed to create order');
+            }
+
+            const createdOrder = response.data.order;
             
             // Clear cart after successful order
             await clearCart();
             
-            return { success: true, order };
+            return { success: true, order: createdOrder };
         }, 'Failed to create order');
-    }, [items, customer, billingInfo, paymentInfo, configurations, totalAmount, clearCart, performOperation]);
+    }, [items, customer, configurations, clearCart, performOperation]);
     
     const getOrderById = useCallback(async (orderId) => {
         return performOperation(async () => {

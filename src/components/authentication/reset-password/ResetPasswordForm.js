@@ -27,7 +27,7 @@ export default function ResetPasswordForm({ onSent, onGetEmail }) {
     validationSchema: ResetPasswordSchema,
     onSubmit: async (values, { setErrors, setSubmitting }) => {
       try {
-        // Simulate API call
+        // Call the real API for password reset
         await AuthService.resetPassword(values.email);
 
         // Pass email back to parent component
@@ -40,7 +40,8 @@ export default function ResetPasswordForm({ onSent, onGetEmail }) {
           onSent();
         }
       } catch (error) {
-        setErrors({ afterSubmit: error.message || "Something went wrong" });
+        setErrors({ afterSubmit: error.response?.data?.message || error.message || "Something went wrong" });
+      } finally {
         setSubmitting(false);
       }
     },

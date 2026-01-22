@@ -49,13 +49,13 @@ import PaymentIcon from '../payment/PaymentIcon';
 // Add this import at the top of the file
 import PaymentMethodSelector from './payment/PaymentMethodSelector';
 
-// Add imports for our normalization utilities
+// Add the missing imports
 import {
   normalizeOrderObject,
   normalizeCustomerObject,
   prepareAmountForApi,
   prepareAmountForDisplay
-} from '../../utils/dataNormalization';
+} from '../../utils/dataNormalizationClient';
 
 // Update the imports to include the payment method order
 import {

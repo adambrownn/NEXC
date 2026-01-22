@@ -62,24 +62,50 @@ exports.getAssociationById = async (id) => {
 
 exports.createAssociation = async (data) => {
   try {
-    console.log('Creating new trade-service association with data:', data);
+    console.log('Creating/updating trade-service association with data:', data);
 
     // Validate trade ID
     if (!mongoose.Types.ObjectId.isValid(data.trade)) {
       throw new Error('Invalid trade ID format');
     }
 
-    // Create new association
-    const association = new TradeServiceAssociation({
-      trade: data.trade,
-      cards: data.cards || [],
-      tests: data.tests || [],
-      courses: data.courses || [],
-      qualifications: data.qualifications || []
-    });
+    // Check if association already exists for this trade
+    let association = await TradeServiceAssociation.findOne({ trade: data.trade });
 
-    // Save and populate the association
-    await association.save();
+    if (association) {
+      // Merge arrays - add new items without duplicates
+      console.log('Association exists, merging services...');
+      
+      const mergeArrays = (existing, incoming) => {
+        const existingIds = existing.map(id => id.toString());
+        const newItems = (incoming || []).filter(id => !existingIds.includes(id.toString()));
+        return [...existing, ...newItems];
+      };
+
+      association.cards = mergeArrays(association.cards, data.cards);
+      association.tests = mergeArrays(association.tests, data.tests);
+      association.courses = mergeArrays(association.courses, data.courses);
+      association.qualifications = mergeArrays(association.qualifications, data.qualifications);
+      association.updatedAt = Date.now();
+
+      await association.save();
+      console.log('Successfully merged association');
+    } else {
+      // Create new association
+      console.log('No existing association, creating new one...');
+      association = new TradeServiceAssociation({
+        trade: data.trade,
+        cards: data.cards || [],
+        tests: data.tests || [],
+        courses: data.courses || [],
+        qualifications: data.qualifications || []
+      });
+
+      await association.save();
+      console.log('Successfully created new association');
+    }
+
+    // Populate and return
     const populatedAssociation = await TradeServiceAssociation.findById(association._id)
       .populate('trade', 'title name _id')
       .populate('cards', 'title _id')
@@ -88,7 +114,6 @@ exports.createAssociation = async (data) => {
       .populate('qualifications', 'title _id')
       .lean();
 
-    console.log('Successfully created association:', populatedAssociation);
     return populatedAssociation;
   } catch (error) {
     console.error('Error in createAssociation:', error);

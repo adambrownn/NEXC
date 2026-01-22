@@ -13,8 +13,8 @@ const axiosInstance = axios.create({
   baseURL,
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json',
     'Accept': 'application/json'
+    // Content-Type is set per-request to support both JSON and FormData
   },
   withCredentials: true
 });
@@ -29,6 +29,19 @@ axiosInstance.interceptors.request.use(
       // Add /v1 prefix if the URL doesn't already have it and isn't a health check
       if (!url.startsWith('/v1') && !url.startsWith('/health')) {
         config.url = `/v1${url}`;
+      }
+
+      // Set Content-Type for non-FormData requests
+      // Check both instanceof and constructor name for browser compatibility
+      const isFormData = config.data instanceof FormData || 
+                        (config.data && config.data.constructor && config.data.constructor.name === 'FormData');
+      
+      if (!isFormData) {
+        config.headers['Content-Type'] = 'application/json';
+      } else {
+        // Explicitly delete Content-Type for FormData - let browser/axios generate it
+        delete config.headers['Content-Type'];
+        console.log('[Axios] FormData detected, Content-Type will be auto-generated with boundary');
       }
 
       const headerAccessToken = await AuthHeader.getAuthHeaderToken();

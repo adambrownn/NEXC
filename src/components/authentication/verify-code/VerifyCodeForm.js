@@ -91,19 +91,25 @@ export default function VerifyCodeForm({
           verificationResponse = await AuthService.verifyCodePhone(identifier, verificationCode);
         }
 
-        if (verificationResponse.err) {
-          setErrorMsg(verificationResponse.err);
-        } else {
+        // Handle API response
+        if (verificationResponse.err || verificationResponse.error) {
+          setErrorMsg(verificationResponse.err || verificationResponse.error);
+        } else if (verificationResponse.success || verificationResponse.verified) {
           // Call success callback or navigate
           if (onSuccess) {
             onSuccess();
           } else {
             navigate(PATH_DASHBOARD.root);
           }
+        } else {
+          setErrorMsg("Verification failed. Please try again.");
         }
       } catch (error) {
-        console.error('Verification error:', error);
-        setErrorMsg(error.message || "Verification failed. Please try again.");
+        setErrorMsg(
+          error.response?.data?.message ||
+          error.message ||
+          "Verification failed. Please try again."
+        );
       }
     },
   });

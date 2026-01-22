@@ -1,43 +1,131 @@
-import React from "react";
+import React, { forwardRef } from "react";
+import PropTypes from "prop-types";
+// material
+import { useTheme } from "@mui/material/styles";
 import {
+  // Box,
   Card,
   CardContent,
   CardHeader,
   Divider,
   Typography,
-  useTheme,
 } from "@mui/material";
 
-const SubCard = (props) => {
-  const theme = useTheme();
+// ==============================|| CUSTOM SUB CARD ||============================== //
 
-  return (
-    <Card
-      sx={{
-        border: "1px solid",
-        borderColor: theme.palette.primary.light,
-        ":hover": {
-          boxShadow: "0 4px 24px 0 rgb(34 41 47 / 10%)",
-        },
-        background: props.backgroundColor || "none",
-        color: props.color || "#000",
-      }}
-    >
-      {!props.darkTitle && props.title && (
-        <CardHeader
-          title={<Typography variant="h5">{props.title}</Typography>}
-          action={props.secondary}
-        />
-      )}
-      {props.darkTitle && props.title && (
-        <CardHeader
-          title={<Typography variant="h4">{props.title}</Typography>}
-        />
-      )}
-      {props.title && <Divider sx={{ borderColor: "primary.light" }} />}
-      <CardContent className={props.contentClass}>{props.children}</CardContent>
-    </Card>
-  );
+const SubCard = forwardRef(
+  (
+    {
+      children,
+      content,
+      contentClass,
+      darkTitle,
+      divider,
+      secondary,
+      sx,
+      title,
+      ...others
+    },
+    ref
+  ) => {
+    const theme = useTheme();
+
+    return (
+      <Card
+        ref={ref}
+        sx={{
+          border: "1px solid",
+          borderColor:
+            theme.palette.mode === "dark"
+              ? theme.palette.divider
+              : theme.palette.grey[300],
+          borderRadius: 2,
+          boxShadow: theme.customShadows.z1,
+          overflow: "hidden",
+          position: "relative",
+          transition: "all .2s ease-in-out",
+          "&:hover": {
+            boxShadow: theme.customShadows.z8,
+            transform: "translateY(-5px)",
+          },
+          ...sx,
+        }}
+        {...others}
+      >
+        {/* card header and action */}
+        {!darkTitle && title && (
+          <CardHeader
+            sx={{
+              p: 2.5,
+              "& .MuiCardHeader-action": { m: "0px auto", alignSelf: "center" },
+            }}
+            titleTypographyProps={{ variant: "h6" }}
+            title={title}
+            action={secondary}
+          />
+        )}
+        {darkTitle && title && (
+          <CardHeader
+            sx={{
+              p: 2.5,
+              backgroundColor: theme.palette.primary.light,
+              "& .MuiCardHeader-title": {
+                color: theme.palette.background.paper,
+              },
+            }}
+            title={
+              <Typography variant="h5" fontWeight="600">
+                {title}
+              </Typography>
+            }
+            action={secondary}
+          />
+        )}
+
+        {/* content & header divider */}
+        {title && divider && <Divider sx={{ opacity: 0.5 }} />}
+
+        {/* card content */}
+        {content && (
+          <CardContent
+            sx={{
+              p: 2.5,
+              pt: title ? 1 : 2.5,
+              pb: "20px !important", // to override the default padding bottom
+            }}
+            className={contentClass || ""}
+          >
+            {children}
+          </CardContent>
+        )}
+        {!content && children}
+      </Card>
+    );
+  }
+);
+
+SubCard.propTypes = {
+  children: PropTypes.node,
+  content: PropTypes.bool,
+  contentClass: PropTypes.string,
+  darkTitle: PropTypes.bool,
+  divider: PropTypes.bool,
+  secondary: PropTypes.oneOfType([
+    PropTypes.node,
+    PropTypes.string,
+    PropTypes.object,
+  ]),
+  sx: PropTypes.object,
+  title: PropTypes.oneOfType([
+    PropTypes.node,
+    PropTypes.string,
+    PropTypes.object,
+  ]),
+};
+
+SubCard.defaultProps = {
+  content: true,
+  divider: true,
 };
 
 export default SubCard;

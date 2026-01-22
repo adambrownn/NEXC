@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 import { Icon } from "@iconify/react";
-import { useState, useEffect, useRef } from "react"; // Added useRef
+import { useState, useEffect } from "react"; // Added useRef
 import menu2Fill from "@iconify/icons-eva/menu-2-fill";
 import { HashLink as HLink } from "react-router-hash-link";
 import { NavLink as RouterLink, useLocation } from "react-router-dom";
@@ -31,7 +31,7 @@ import Scrollbar from "../../components/Scrollbar";
 import { MIconButton } from "../../components/@material-extend";
 //
 // import menuConfig from "./MenuConfig";
-import GroupBookingForm from "../../components/_external-pages/forms/GroupBookingForm"; // Added for Group Booking integration
+// import GroupBookingForm from "../../components/_external-pages/forms/GroupBookingForm"; // Added for Group Booking integration
 
 // ----------------------------------------------------------------------
 
@@ -84,57 +84,9 @@ MenuMobileItem.propTypes = {
 
 function MenuMobileItem({ item, isOpen, isActive, onOpen }) {
   const { title, path, icon, children } = item;
-  const isGroupBooking = title === "Group Booking";
-  const groupBookingFormRef = useRef(null);
 
-  // Handle opening Group Booking form
-  const handleGroupBookingClick = (e) => {
-    e.preventDefault();
-    if (groupBookingFormRef.current) {
-      groupBookingFormRef.current.openForm();
-    }
-  };
-
-  if (isGroupBooking) {
-    return (
-      <div data-group-booking-form="true">
-        <ListItemStyle
-          button
-          component="div"
-          onClick={handleGroupBookingClick}
-          sx={{
-            color: "primary.main",
-            fontWeight: 500,
-            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-          }}
-        >
-          <ListItemIcon>
-            <Box
-              sx={{
-                width: ICON_SIZE,
-                height: ICON_SIZE,
-                color: 'primary.main',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Icon icon="mdi:account-group" width={ICON_SIZE} height={ICON_SIZE} />
-            </Box>
-          </ListItemIcon>
-          <ListItemText
-            disableTypography
-            primary={
-              <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                {title}
-              </Typography>
-            }
-          />
-        </ListItemStyle>
-        <GroupBookingForm ref={groupBookingFormRef} menuIntegration={true} />
-      </div>
-    );
-  }
+  // Group Booking now navigates to the /groupbooking page directly
+  // Removed special handling that opened the old form
 
   if (children) {
     return (

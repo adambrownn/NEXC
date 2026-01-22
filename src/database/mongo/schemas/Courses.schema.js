@@ -4,6 +4,7 @@ const modelRegistry = require('../modelRegistry');
 const courseSchema = mongoose.Schema({
   title: { type: String, required: [true, "Course Name is required"] },
   price: { type: Number, required: true, min: 0 },
+  thumbnail: { type: String }, // Course thumbnail image URL from Media system
   tradeId: {
     type: String,
     // required: [true, "Trade Id is required."],

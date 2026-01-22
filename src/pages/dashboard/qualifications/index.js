@@ -1,3 +1,8 @@
+// Export the new enhanced manager as default
+export { default } from './QualificationsManager';
+
+/*
+// Old component code kept for reference only (commented out)
 import React, { useState, useEffect, useContext, createContext } from "react";
 import {
   Card,
@@ -147,4 +152,6 @@ const Qualifications = (props) => {
   );
 };
 
-export default Qualifications;
+// Old component kept for reference only - using QualificationsManager instead
+// export default Qualifications;
+**/

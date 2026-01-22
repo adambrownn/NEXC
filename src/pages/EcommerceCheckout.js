@@ -199,7 +199,8 @@ export default function EcommerceCheckout() {
 
   // Use CartContext for all cart-related operations
   // We're using CartContext in child components, but not directly here
-  const { } = useCart();
+  // eslint-disable-next-line no-empty-pattern
+  const {} = useCart();
   
   const navigate = useNavigate();
   const theme = useTheme();

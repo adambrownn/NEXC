@@ -1,4 +1,5 @@
 const https = require('https');
+const http = require('http');
 const fs = require('fs');
 const express = require("express");
 const cookieParser = require("cookie-parser");
@@ -18,10 +19,16 @@ app.use(cors({
     : ['http://localhost:3000', 'https://localhost:3000'],
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// IMPORTANT: Do NOT use express.json() and express.urlencoded() globally
+// They will corrupt multipart/form-data uploads (multer)
+// These are applied selectively in routes that need them
+
 app.use(cookieParser());
-app.use(fileUpload());
+
+// REMOVED: app.use(fileUpload());
+// express-fileupload conflicts with multer for multipart/form-data parsing
+// Use multer in specific routes that need file uploads
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -70,8 +77,40 @@ require("./src/database/mongo/schemas/Cards.schema");
 require("./src/database/mongo/schemas/Courses.schema");
 require("./src/database/mongo/schemas/Tests.schema");
 
+// Load Blog schema
+console.log('Loading Blog schema...');
+require("./src/database/mongo/schemas/Blog.schema");
+
+// Load Media schema
+console.log('Loading Media schema...');
+require("./src/database/mongo/schemas/Media.schema");
+
+// Load Chat schemas
+console.log('Loading Chat schemas...');
+require("./src/database/mongo/schemas/ChatSession.schema");
+require("./src/database/mongo/schemas/ChatMessage.schema");
+
+// Load Support Ticket schema
+console.log('Loading Support Ticket schema...');
+require("./src/database/mongo/schemas/SupportTicket.schema");
+
+// Load Notification schema
+console.log('Loading Notification schema...');
+require("./src/database/mongo/schemas/Notification.schema");
+
+// Load Voice (Twilio) call log schema
+console.log('Loading VoiceCalls schema...');
+require("./src/database/mongo/schemas/VoiceCalls.schema");
+
+// Load Technician schema
+console.log('Loading Technician schema...');
+require("./src/database/mongo/schemas/Technicians.schema");
+
 // Add this with other route imports
 const chatController = require('./src/api/v1/chat/chat.controller');
+
+// Declare server at module scope for cleanup handlers
+let server = null;
 
 async function initializeServer() {
   try {
@@ -81,6 +120,7 @@ async function initializeServer() {
 
     // Wait for models to initialize
     console.log('Initializing models...');
+    // Initialize models first
     await new Promise((resolve, reject) => {
       try {
         modelRegistry.initializeModels();
@@ -91,26 +131,6 @@ async function initializeServer() {
             throw new Error(`Required model ${model} was not initialized`);
           }
         }
-
-        const httpsOptions = {
-          key: fs.readFileSync(path.join(__dirname, 'certs/server.key')),
-          cert: fs.readFileSync(path.join(__dirname, 'certs/server.cert'))
-        };
-
-        // Create HTTPS server
-        const server = https.createServer(httpsOptions, app);
-
-        // Initialize Socket.IO with the server
-        const io = initializeSocketServer(server);
-
-        // Start listening
-        server.listen(PORT, () => {
-          console.log(`HTTPS Server is running on port ${PORT}`);
-          console.log('Socket.IO server initialized');
-          console.log('Database connection status:', isDbConnected() ? 'Connected' : 'Not Connected');
-          console.log('Models initialization status:', modelRegistry.areModelsInitialized() ? 'Initialized' : 'Not Initialized');
-        });
-
         console.log('All required models initialized successfully');
         resolve();
       } catch (error) {
@@ -118,27 +138,32 @@ async function initializeServer() {
       }
     });
 
-    // API routes - mount these before static files
+    // API routes - mount these BEFORE creating the server
     console.log('[Server] Setting up API routes...');
     const routes = require("./src/routes/routes");
     console.log('[Server] Routes module loaded successfully');
-
-    // Test route to verify API mounting
-    app.get('/v1/test', (req, res) => {
-      res.json({
-        message: 'API routes are mounted correctly',
-        dbConnected: isDbConnected(),
-        modelsInitialized: modelRegistry.areModelsInitialized()
-      });
-    });
+    
+    // Test email service initialization
+    console.log('\n[Server] Testing email service...');
+    const emailService = require('./src/common/services/email.service');
+    const emailConfig = emailService.getConfig();
+    console.log('[Server] Email service config:', JSON.stringify(emailConfig, null, 2));
+    if (emailConfig.hasApiKey) {
+      console.log('✅ [Server] Email service is configured and ready');
+    } else {
+      console.warn('⚠️ [Server] Email service not configured - missing API key');
+    }
 
     // Mount API routes at /v1
     app.use("/v1", routes);
-    app._router.stack.forEach(function (r) {
-      if (r.route && r.route.path) {
-        console.log(r.route.path)
-      }
-    });
+    
+    // Log routes after mounting
+    console.log('\nMounted API routes at /v1');
+    console.log('Auth endpoints available:');
+    console.log('  POST /v1/auth/login');
+    console.log('  POST /v1/auth/create-admin');
+    console.log('  POST /v1/auth/sync-users');
+    console.log('  GET /v1/auth/debug-users (dev only)');
 
     // Then add this with other app.use statements
     app.use('/v1/chat', chatController);
@@ -193,9 +218,98 @@ async function initializeServer() {
       });
     });
 
+    // NOW create and start the HTTPS server AFTER all routes are mounted
+    const httpsOptions = {
+      key: fs.readFileSync(path.join(__dirname, 'certs/server.key')),
+      cert: fs.readFileSync(path.join(__dirname, 'certs/server.cert'))
+    };
+
+    // Create HTTPS server
+    server = https.createServer(httpsOptions, app);
+
+    // Initialize Socket.IO with the server
+    const io = initializeSocketServer(server);
+
+    // Start listening
+    server.listen(PORT, () => {
+      console.log(`\n✅ HTTPS Server is running on port ${PORT}`);
+      console.log('✅ Socket.IO server initialized');
+      console.log('✅ Database connection status:', isDbConnected() ? 'Connected' : 'Not Connected');
+      console.log('✅ Models initialization status:', modelRegistry.areModelsInitialized() ? 'Initialized' : 'Not Initialized');
+    });
+
+    // ALSO start HTTP server on port 8081 for ngrok (development only)
+    if (process.env.ENV !== 'production') {
+      const httpServer = http.createServer(app);
+      const HTTP_PORT = 8081;
+      httpServer.listen(HTTP_PORT, () => {
+        console.log(`✅ HTTP Server (for ngrok) running on port ${HTTP_PORT}`);
+      });
+    }
+
+    app.use(express.static(path.join(__dirname, 'build')));
+
+    // Handle React routing AFTER API routes and static files
+    app.get('*', function (req, res) {
+      res.sendFile(path.join(__dirname, 'build', 'index.html'));
+    });
+
+    // Global error handler - keep this last
+    app.use((err, req, res, next) => {
+      console.error(`[Error] ${req.method} ${req.url}:`, err);
+      res.status(500).json({
+        success: false,
+        error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message
+      });
+    });
+
     // if in production
     if (process.env.ENV === "production") {
       // Add production-specific configurations here
+    }
+
+    // Add development-specific optimizations
+    if (process.env.NODE_ENV !== 'production') {
+      // Reduce logging in development - FIXED VERSION
+      const originalLog = console.log;
+      console.log = (...args) => {
+        // Only log important messages - safely check if args[0] is a string
+        if (args[0] && 
+            typeof args[0] === 'string' && 
+            (args[0].includes('Error') || 
+             args[0].includes('Warning') || 
+             args[0].includes('✅') || 
+             args[0].includes('❌'))) {
+          originalLog(...args);
+        }
+        // Also log objects/arrays that might contain error information
+        else if (args[0] && typeof args[0] === 'object') {
+          const stringified = JSON.stringify(args[0]);
+          if (stringified.includes('Error') || stringified.includes('Warning')) {
+            originalLog(...args);
+          }
+        }
+        // Always log console calls that don't have a first argument (edge case)
+        else if (!args[0]) {
+          originalLog(...args);
+        }
+      };
+      
+      // Add process monitoring
+      setInterval(() => {
+        const usage = process.memoryUsage();
+        const usedMB = usage.heapUsed / 1024 / 1024;
+        
+        if (usedMB > 200) { // 200MB threshold
+          console.warn(`⚠️ [Server] High memory usage: ${usedMB.toFixed(2)}MB`);
+          
+          // Force garbage collection
+          if (global.gc) {
+            global.gc();
+            console.log('🧹 [Server] Forced garbage collection');
+          }
+        }
+      }, 60000); // Check every minute
     }
 
     // Graceful shutdown handling

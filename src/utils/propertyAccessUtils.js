@@ -1,111 +1,129 @@
 /**
- * Property Access Utilities
- * 
- * This module provides standardized accessors for object properties
- * that may have inconsistent naming across the application.
- * Instead of directly accessing properties like obj.id or obj._id,
- * use these utilities to ensure consistent access.
+ * Utility functions to safely access object properties
+ * CommonJS version for backend compatibility
  */
 
 /**
- * Gets the ID from an object that might use either 'id' or '_id'
- * @param {Object} obj - Object to get ID from 
- * @param {string} [defaultValue=null] - Default value if no ID is found
- * @returns {string|null} The ID value or default
+ * Get ID from an object with various possible property names
+ * @param {Object} obj - Object to extract ID from
+ * @returns {string|null} - The ID value or null
  */
-const getId = (obj, defaultValue = null) => {
-    if (!obj) return defaultValue;
-    return obj._id || obj.id || defaultValue;
+const getId = (obj) => {
+  if (!obj) return null;
+  
+  return obj._id || 
+         obj.id || 
+         obj.userId || 
+         obj.customerId || 
+         obj.orderId || 
+         null;
 };
 
 /**
- * Gets the amount from an order object that might use various property names
+ * Get customer email from various property formats
+ * @param {Object} customer - Customer object
+ * @returns {string} - Email address
+ */
+const getCustomerEmail = (customer) => {
+  if (!customer) return '';
+  
+  return customer.email || 
+         customer.emailAddress || 
+         customer.customerEmail || 
+         customer.Email || 
+         '';
+};
+
+/**
+ * Get customer name from various property formats
+ * @param {Object} customer - Customer object
+ * @returns {string} - Customer name
+ */
+const getCustomerName = (customer) => {
+  if (!customer) return '';
+  
+  return customer.name || 
+         customer.displayName ||
+         customer.fullName ||
+         (customer.firstName && customer.lastName ? `${customer.firstName} ${customer.lastName}` : '') ||
+         customer.customerName ||
+         '';
+};
+
+/**
+ * Get order amount from various property formats
  * @param {Object} order - Order object
- * @param {number} [defaultValue=0] - Default value if no amount is found
- * @returns {number} The amount value
+ * @returns {number} - Order amount
  */
-const getOrderAmount = (order, defaultValue = 0) => {
-    if (!order) return defaultValue;
-
-    // Return the first defined amount property
-    return order.amount || order.grandTotalToPay || order.itemsTotal || defaultValue;
+const getOrderAmount = (order) => {
+  if (!order) return 0;
+  
+  return parseFloat(
+    order.amount ||
+    order.grandTotalToPay ||
+    order.itemsTotal ||
+    order.total ||
+    order.grandTotal ||
+    order.totalAmount ||
+    order.orderTotal ||
+    0
+  );
 };
 
 /**
- * Gets the customer ID from various possible sources
- * @param {Object} data - Object that might contain customer information
- * @param {string} [defaultValue=null] - Default value if no customer ID is found
- * @returns {string|null} The customer ID value
- */
-const getCustomerId = (data, defaultValue = null) => {
-    if (!data) return defaultValue;
-
-    // Check direct customerId property
-    if (data.customerId) return data.customerId;
-
-    // Check nested customer object
-    if (data.customer) {
-        return getId(data.customer, defaultValue);
-    }
-
-    return defaultValue;
-};
-
-/**
- * Gets the order reference from an order object
+ * Get order reference from various property formats
  * @param {Object} order - Order object
- * @param {string} [defaultValue='N/A'] - Default value if no reference is found
- * @returns {string} The order reference
+ * @returns {string} - Order reference
  */
-const getOrderReference = (order, defaultValue = 'N/A') => {
-    if (!order) return defaultValue;
-
-    return order.orderReference || order.reference || defaultValue;
+const getOrderReference = (order) => {
+  if (!order) return '';
+  
+  return order.orderReference ||
+         order.reference ||
+         order.orderRef ||
+         order.orderNumber ||
+         order.orderNo ||
+         '';
 };
 
 /**
- * Gets formatted name from a customer object
- * @param {Object} customer - Customer object 
- * @param {string} [defaultValue=''] - Default value if no name is found
- * @returns {string} Formatted name
+ * Get customer ID from various property formats
+ * @param {Object} obj - Object to extract customer ID from
+ * @returns {string|null} - The customer ID value or null
  */
-const getCustomerName = (customer, defaultValue = '') => {
-    if (!customer) return defaultValue;
-
-    if (customer.name) return customer.name;
-
-    const firstName = customer.firstName || '';
-    const lastName = customer.lastName || '';
-
-    if (firstName || lastName) {
-        return `${firstName} ${lastName}`.trim();
-    }
-
-    return defaultValue;
+const getCustomerId = (obj) => {
+  if (!obj) return null;
+  
+  return obj.customerId || 
+         obj.customer_id || 
+         obj.customer?._id ||
+         obj.customer?.id ||
+         getId(obj.customer) ||
+         null;
 };
 
 /**
- * Gets customer email from various possible sources
- * @param {Object} data - Object that might contain customer information
- * @param {string} [defaultValue=''] - Default value if no email is found
- * @returns {string} The email value
+ * Get customer phone from various property formats
+ * @param {Object} customer - Customer object
+ * @returns {string} - Phone number
  */
-const getCustomerEmail = (data, defaultValue = '') => {
-    if (!data) return defaultValue;
-
-    if (data.email) return data.email;
-
-    if (data.customer && data.customer.email) {
-        return data.customer.email;
-    }
-
-    return defaultValue;
+const getCustomerPhone = (customer) => {
+  if (!customer) return '';
+  
+  return customer.phoneNumber ||
+         customer.phone ||
+         customer.mobile ||
+         customer.contactNumber ||
+         '';
 };
 
+// CommonJS exports ONLY for backend
 module.exports = {
-    getId,
-    getOrderAmount,
-    getCustomerId,
-    getOrderReference,
-    getCustomerName
+  getId,
+  getCustomerEmail,
+  getCustomerName,
+  getOrderAmount,
+  getOrderReference,
+  getCustomerId,
+  getCustomerPhone
 };

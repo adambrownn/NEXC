@@ -30,17 +30,52 @@ export default function DashboardThemeProvider({ children }) {
         mode: isDarkMode ? 'dark' : 'light',
         ...(isDarkMode && {
           background: {
-            default: '#161C24',
-            paper: '#212B36',
+            default: '#0A1929',
+            paper: '#132F4C',
+            neutral: '#1C2831',
           },
           text: {
             primary: '#fff',
-            secondary: '#919EAB',
+            secondary: '#B2BAC2',
+          },
+          primary: {
+            main: '#3366FF',
+            light: '#5E84FF',
+            dark: '#1939B7',
           },
         }),
+        // Enhanced dashboard-specific colors
+        dashboard: {
+          card: {
+            background: isDarkMode ? '#132F4C' : '#ffffff',
+            hover: isDarkMode ? '#1C2831' : '#f8f9fa',
+          },
+          metric: {
+            primary: '#1976d2',
+            success: '#2e7d32',
+            warning: '#ed6c02',
+            error: '#d32f2f',
+            info: '#0288d1',
+          }
+        }
       },
       shape,
-      typography,
+      typography: {
+        ...typography,
+        // Enhanced dashboard typography
+        h4: {
+          ...typography.h4,
+          fontWeight: 700,
+        },
+        h5: {
+          ...typography.h5,
+          fontWeight: 600,
+        },
+        subtitle1: {
+          ...typography.subtitle1,
+          fontWeight: 600,
+        },
+      },
       shadows: isDarkMode ? shadows.dark : shadows.light,
       customShadows: isDarkMode ? customShadows.dark : customShadows.light,
     }),

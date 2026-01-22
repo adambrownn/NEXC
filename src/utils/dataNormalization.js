@@ -1,316 +1,221 @@
 /**
- * Data normalization utilities
- * These functions ensure consistent data structures throughout the application
- * by standardizing object properties and conversion operations.
+ * Basic data normalization utilities
+ * CommonJS version for backend compatibility
  */
 
+const { 
+  getId, 
+  getCustomerName, 
+  getCustomerEmail, 
+  getOrderAmount, 
+  getOrderReference,
+  getCustomerId,
+  getCustomerPhone
+} = require('./propertyAccessUtils');
+
 /**
- * Normalizes order object structure to ensure consistent property access
- * @param {Object} order - The order object to normalize
- * @returns {Object} - Normalized order object with consistent properties
+ * Normalize order object to ensure consistent property names
+ * @param {Object} order - Raw order object
+ * @returns {Object} - Normalized order object
  */
 const normalizeOrderObject = (order) => {
-    if (!order) return null;
+  if (!order) return {};
 
-    // Handle empty or invalid input
-    if (!order || typeof order !== 'object' || Object.keys(order).length === 0) {
-        return {};
-    }
-
-    // Ensure consistent ID field
-    const id = order._id || order.id || null;
-
-    // Calculate amount consistently
-    let amount = 0;
-    if (typeof order.amount === 'number') {
-        amount = order.amount;
-    } else if (typeof order.grandTotalToPay === 'number') {
-        amount = order.grandTotalToPay;
-    } else if (typeof order.itemsTotal === 'number') {
-        amount = order.itemsTotal;
-    } else if (Array.isArray(order.items) && order.items.length > 0) {
-        // Calculate from items if available
-        amount = order.items.reduce((sum, item) => {
-            const itemPrice = Number(item.price) || 0;
-            const itemQuantity = Number(item.quantity) || 1;
-            return sum + (itemPrice * itemQuantity);
-        }, 0);
-    } else if (Array.isArray(order.services) && order.services.length > 0) {
-        // Calculate from services if available
-        amount = order.services.reduce((sum, service) => {
-            const servicePrice = Number(service.price) || 0;
-            const serviceQuantity = Number(service.quantity) || 1;
-            return sum + (servicePrice * serviceQuantity);
-        }, 0);
-    }
-
-    // Standardize items array
-    const items = Array.isArray(order.items) ? order.items :
-        Array.isArray(order.services) ? order.services : [];
-
-    const normalizedItems = items.map(item => ({
-        ...item,
-        _id: item._id || item.id || item.service || null,
-        id: item._id || item.id || item.service || null,
-        price: Number(item.price) || 0,
-        quantity: Number(item.quantity) || 1,
-        // Standardize type field
-        type: item.type || item.serviceType || 'service',
-        // Ensure service details are present
-        details: item.details || {}
-    }));
-
-    // Normalize customer information
-    const customer = order.customer || {};
-    const customerId = order.customerId || customer._id || customer.id || null;
-
-    // Return normalized object with all possible fields
-    return {
-        ...order,
-        _id: id,
-        id: id,
-
-        // Amount properties - ensure all are present for compatibility
-        amount: amount,
-        grandTotalToPay: amount,
-        itemsTotal: amount,
-        totalAmount: amount,
-
-        // Standardize items structure
-        items: normalizedItems,
-        services: normalizedItems, // For backward compatibility
-
-        // Ensure customer reference is consistent
-        customerId: customerId,
-        customer: customer ? {
-            ...customer,
-            _id: customer._id || customer.id || customerId,
-            id: customer.id || customer._id || customerId
-        } : null,
-
-        // Other standardized fields
-        orderReference: order.orderReference || order.reference || `ORD-${Date.now()}`,
-        status: order.status || 'pending',
-        paymentStatus: order.paymentStatus || 0,
-        createdAt: order.createdAt || new Date().toISOString(),
-        updatedAt: order.updatedAt || new Date().toISOString(),
-    };
+  return {
+    id: getId(order),
+    customerId: getCustomerId(order),
+    customer: order.customer || {},
+    items: Array.isArray(order.items) ? order.items : 
+           Array.isArray(order.services) ? order.services : [],
+    amount: getOrderAmount(order),
+    status: order.status || 'pending',
+    paymentStatus: order.paymentStatus || 0,
+    orderReference: getOrderReference(order),
+    orderType: order.orderType || 'ONLINE',
+    
+    // Group Booking Fields
+    isGroupBooking: order.isGroupBooking || false,
+    organizationName: order.organizationName || '',
+    bookingContact: order.bookingContact || null,
+    recipientIds: Array.isArray(order.recipientIds) ? order.recipientIds : [],
+    groupBookingNotes: order.groupBookingNotes || '',
+    
+    createdAt: order.createdAt || order.created_at || new Date(),
+    updatedAt: order.updatedAt || order.updated_at || new Date(),
+    ...order // Keep any additional properties
+  };
 };
 
 /**
- * Normalizes customer object structure to ensure consistent property access
- * @param {Object} customer - The customer object to normalize
- * @returns {Object} - Normalized customer object with consistent properties
+ * Normalize customer object to ensure consistent property names
+ * @param {Object} customer - Raw customer object
+ * @returns {Object} - Normalized customer object
  */
 const normalizeCustomerObject = (customer) => {
-    if (!customer) return null;
+  if (!customer) return {};
 
-    // Handle empty or invalid input
-    if (typeof customer !== 'object' || Object.keys(customer).length === 0) {
-        return {};
-    }
+  const firstName = customer.firstName || customer.first_name || '';
+  const lastName = customer.lastName || customer.last_name || '';
 
-    // Ensure consistent ID field
-    const id = customer._id || customer.id || null;
-
-    // Determine name components
-    const firstName = customer.firstName ||
-        (customer.name ? customer.name.split(' ')[0] : '');
-
-    const lastName = customer.lastName ||
-        (customer.name && customer.name.split(' ').length > 1
-            ? customer.name.split(' ').slice(1).join(' ')
-            : '');
-
-    // Build full name if not present
-    const name = customer.name ||
-        ((firstName || lastName) ? `${firstName} ${lastName}`.trim() : '');
-
-    // Normalize customer type
-    const customerType = customer.customerType ||
-        (customer.companyName ? 'COMPANY' : 'INDIVIDUAL');
-
-    return {
-        ...customer,
-        _id: id,
-        id: id,
-
-        // Name fields
-        name,
-        firstName,
-        lastName,
-
-        // Type information
-        customerType,
-
-        // Contact information with fallbacks
-        email: customer.email || '',
-        phoneNumber: customer.phoneNumber || customer.phone || '',
-
-        // Address information
-        address: customer.address || '',
-        city: customer.city || '',
-        zipcode: customer.zipcode || customer.postcode || '',
-
-        // Additional identification
-        NINumber: customer.NINumber || customer.niNumber || '',
-        dateOfBirth: customer.dateOfBirth || customer.dob || null,
-
-        // Company information if applicable
-        companyName: customer.companyName || '',
-        companyRegNumber: customer.companyRegNumber || '',
-
-        // Status fields
-        status: customer.status || 'NEW_FIRST_TIME'
-    };
+  return {
+    id: getId(customer),
+    name: getCustomerName(customer),
+    firstName: firstName,
+    lastName: lastName,
+    email: getCustomerEmail(customer),
+    phoneNumber: getCustomerPhone(customer),
+    address: customer.address || '',
+    dateOfBirth: customer.dateOfBirth || customer.dob || '',
+    ...customer // Keep any additional properties
+  };
 };
 
 /**
- * Converts pounds to pence for Stripe API (multiply by 100)
- * @param {number|string} pounds - Amount in pounds (can be string or number)
- * @returns {number} Amount in pence as integer
+ * Convert pounds to pence (multiply by 100)
+ * @param {number} pounds - Amount in pounds
+ * @returns {number} - Amount in pence
  */
 const poundsToPence = (pounds) => {
-    if (pounds === null || pounds === undefined) return 0;
-
-    // If it's already a large number (likely already in pence), return it
-    if (typeof pounds === 'number' && pounds > 1000) return Math.round(pounds);
-
-    // Parse to float if it's a string
-    const amount = typeof pounds === 'string' ? parseFloat(pounds) : pounds;
-
-    // Guard against NaN
-    if (isNaN(amount)) return 0;
-
-    // Convert to pence and round to avoid floating point issues
-    return Math.round(amount * 100);
+  return Math.round((parseFloat(pounds) || 0) * 100);
 };
 
 /**
- * Converts pence to pounds (for display)
- * @param {number|string} pence - Amount in pence
- * @returns {number} - Amount in pounds with decimal
+ * Convert pence to pounds (divide by 100)
+ * @param {number} pence - Amount in pence
+ * @returns {number} - Amount in pounds
  */
 const penceToPounds = (pence) => {
-    if (pence === null || pence === undefined) return 0;
-
-    // If it's a very small number (likely already in pounds), return it
-    if (typeof pence === 'number' && pence < 10) return pence;
-
-    // Parse to integer if it's a string
-    const amount = typeof pence === 'string' ? parseInt(pence, 10) : pence;
-
-    // Guard against NaN
-    if (isNaN(amount)) return 0;
-
-    // Convert to pounds with 2 decimal places
-    return amount / 100;
+  return (parseFloat(pence) || 0) / 100;
 };
 
 /**
- * Formats amount for display as currency
- * @param {number} amount - Amount in pounds
- * @param {string} currencyCode - Currency code (default: GBP)
+ * Format currency for display
+ * @param {number} amount - Amount to format
+ * @param {string} currency - Currency code (default: GBP)
  * @returns {string} - Formatted currency string
  */
-const formatCurrency = (amount, currencyCode = 'GBP') => {
-    // Safety check for undefined/null
-    if (amount === null || amount === undefined) return '£0.00';
-
-    // Check if amount is likely in pence (large whole number)
-    const isLikelyPence = typeof amount === 'number' &&
-        amount > 100 &&
-        Number.isInteger(amount);
-
-    // Convert to pounds if needed
-    const amountInPounds = isLikelyPence ? penceToPounds(amount) : amount;
-
-    return new Intl.NumberFormat('en-GB', {
-        style: 'currency',
-        currency: currencyCode
-    }).format(amountInPounds);
+const formatCurrency = (amount, currency = 'GBP') => {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(parseFloat(amount) || 0);
 };
 
 /**
- * Detects if an amount is likely in pounds or pence
- * @param {number} amount - The amount to check
- * @returns {string} 'pounds' or 'pence'
+ * Prepare amount for display (always in pounds with currency symbol)
+ * @param {number} amount - Amount in pounds
+ * @returns {string} - Formatted amount for display
  */
-const detectAmountUnit = (amount) => {
-    if (typeof amount !== 'number') return 'unknown';
-
-    // If it has decimal places or is a small number, likely pounds
-    if (amount !== Math.floor(amount) || amount < 100) {
-        return 'pounds';
-    }
-
-    // Large integers are likely pence
-    return 'pence';
+const prepareAmountForDisplay = (amount) => {
+  return formatCurrency(amount);
 };
 
 /**
- * Standardizes an amount to ensure it's in pounds
- * @param {number} amount - Amount (will detect if pounds or pence)
- * @returns {number} - Standardized amount in pounds
- */
-const standardizeAmountToPounds = (amount) => {
-    const unit = detectAmountUnit(amount);
-    return unit === 'pence' ? penceToPounds(amount) : amount;
-};
-
-/**
- * Standardizes an amount to ensure it's in pence (for Stripe)
- * @param {number} amount - Amount (will detect if pounds or pence)
- * @returns {number} - Standardized amount in pence
- */
-const standardizeAmountToPence = (amount) => {
-    const unit = detectAmountUnit(amount);
-    return unit === 'pounds' ? poundsToPence(amount) : amount;
-};
-
-/**
- * Prepares amount for display in user interface
- * @param {number|string} amount - Amount in any format
- * @param {string} currencyCode - Currency code (default: GBP)
- * @returns {string} - Formatted currency string for display
- */
-const prepareAmountForDisplay = (amount, currencyCode = 'GBP') => {
-    // Convert to number if it's a string
-    let numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-
-    // Handle invalid input
-    if (isNaN(numericAmount)) return formatCurrency(0, currencyCode);
-
-    // Standardize to pounds and format
-    return formatCurrency(standardizeAmountToPounds(numericAmount), currencyCode);
-};
-
-/**
- * Prepares amount for API (ensures pence)
- * @param {number|string} amount - Amount in any format
- * @returns {number} - Amount in pence for API calls
+ * Prepare amount for API (convert to pence for payment processors)
+ * @param {number} amount - Amount in pounds
+ * @returns {number} - Amount in pence for API
  */
 const prepareAmountForApi = (amount) => {
-    // Convert to number if it's a string
-    let numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-
-    // Handle invalid input
-    if (isNaN(numericAmount)) return 0;
-
-    // Standardize to pence
-    return standardizeAmountToPence(numericAmount);
+  return poundsToPence(amount);
 };
 
-// Export all functions at the bottom using CommonJS format
+/**
+ * Simple performance measurement utility
+ * @param {string} label - Label for the measurement
+ * @param {Function} fn - Function to measure
+ * @returns {any} - Result of the function
+ */
+const measurePerformance = (label, fn) => {
+  if (process.env.NODE_ENV === 'development') {
+    const start = Date.now();
+    const result = fn();
+    const end = Date.now();
+    console.log(`⏱️ [Performance] ${label}: ${(end - start)}ms`);
+    return result;
+  }
+  return fn();
+};
+
+/**
+ * Normalize order item with recipient details for group bookings
+ * @param {Object} item - Order item
+ * @param {Object} fallbackCustomer - Fallback customer if no recipient specified
+ * @returns {Object} - Normalized item with recipient
+ */
+const normalizeOrderItem = (item, fallbackCustomer = null) => {
+  if (!item) return {};
+
+  const recipient = item.recipientDetails && item.recipientDetails.firstName
+    ? item.recipientDetails
+    : item.recipientId
+      ? null
+      : fallbackCustomer;
+
+  return {
+    id: getId(item),
+    title: item.title || item.name || '',
+    serviceType: item.serviceType || item.type || 'card',
+    price: parseFloat(item.price) || 0,
+    quantity: item.quantity || 1,
+    status: item.status || 'ordered',
+    recipientId: item.recipientId || null,
+    recipientDetails: item.recipientDetails || null,
+    recipientName: recipient 
+      ? `${recipient.firstName || ''} ${recipient.lastName || ''}`.trim() 
+      : '',
+    cardDetails: item.cardDetails || null,
+    testDetails: item.testDetails || null,
+    courseDetails: item.courseDetails || null,
+    qualificationDetails: item.qualificationDetails || null,
+    assignedTo: item.assignedTo || null,
+    scheduledDate: item.scheduledDate || null,
+    ...item
+  };
+};
+
+/**
+ * Check if an order is a group booking
+ * @param {Object} order - Order object
+ * @returns {boolean}
+ */
+const isGroupBookingOrder = (order) => {
+  if (!order) return false;
+  return order.isGroupBooking === true || 
+         (Array.isArray(order.recipientIds) && order.recipientIds.length > 1);
+};
+
+/**
+ * Get unique recipients from order items
+ * @param {Array} items - Order items array
+ * @returns {Array} - Unique recipient details
+ */
+const getUniqueRecipients = (items) => {
+  if (!Array.isArray(items)) return [];
+  
+  const recipientMap = new Map();
+  
+  items.forEach(item => {
+    if (item.recipientId) {
+      recipientMap.set(String(item.recipientId), item.recipientDetails || { id: item.recipientId });
+    }
+  });
+  
+  return Array.from(recipientMap.values());
+};
+
+// CommonJS exports ONLY for backend
 module.exports = {
-    normalizeOrderObject,
-    normalizeCustomerObject,
-    poundsToPence,
-    penceToPounds,
-    formatCurrency,
-    detectAmountUnit,
-    standardizeAmountToPounds,
-    standardizeAmountToPence,
-    prepareAmountForDisplay,
-    prepareAmountForApi
+  normalizeOrderObject,
+  normalizeCustomerObject,
+  normalizeOrderItem,
+  isGroupBookingOrder,
+  getUniqueRecipients,
+  poundsToPence,
+  penceToPounds,
+  formatCurrency,
+  prepareAmountForDisplay,
+  prepareAmountForApi,
+  measurePerformance
 };

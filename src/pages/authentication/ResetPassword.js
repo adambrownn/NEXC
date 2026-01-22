@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 // material
 import { experimentalStyled as styled } from "@mui/material/styles";
 import { Button, Container, Typography, Paper, Icon } from "@mui/material";
@@ -9,7 +9,7 @@ import LogoOnlyLayout from "../../layouts/LogoOnlyLayout";
 import { PATH_AUTH } from "../../routes/paths";
 // components
 import Page from "../../components/Page";
-import { ResetPasswordForm } from "../../components/authentication/reset-password";
+import ResetPasswordOTPForm from "../../components/authentication/reset-password/ResetPasswordOTPForm";
 import { motion } from 'framer-motion';
 //
 import { SentIcon } from "../../assets";
@@ -55,8 +55,16 @@ const BackButton = styled(Button)(({ theme }) => ({
 // ----------------------------------------------------------------------
 
 export default function ResetPassword() {
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSuccess = () => {
+    setSuccess(true);
+    // Redirect to login after 3 seconds
+    setTimeout(() => {
+      navigate(PATH_AUTH.login);
+    }, 3000);
+  };
 
   return (
     <RootStyle title="Reset Password | NEXC">
@@ -64,24 +72,20 @@ export default function ResetPassword() {
 
       <Container>
         <ContentPaper>
-          {!sent ? (
+          {!success ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
               <Typography variant="h4" gutterBottom sx={{ color: 'text.primary', mb: 1 }}>
-                Forgot your password?
+                Reset your password
               </Typography>
               <Typography sx={{ color: "text.secondary", mb: 4 }}>
-                Please enter the email address associated with your account and
-                we will email you a link to reset your password.
+                We'll send you a verification code to reset your password securely.
               </Typography>
 
-              <ResetPasswordForm
-                onSent={() => setSent(true)}
-                onGetEmail={(value) => setEmail(value)}
-              />
+              <ResetPasswordOTPForm onSuccess={handleSuccess} />
 
               <BackButton
                 fullWidth
@@ -104,15 +108,16 @@ export default function ResetPassword() {
               <SentIcon sx={{ mb: 5, mx: "auto", height: 160, width: 'auto' }} />
 
               <Typography variant="h4" gutterBottom sx={{ color: 'primary.main' }}>
-                Request sent successfully
+                Password Reset Successful! 🎉
               </Typography>
               <Typography sx={{ color: "text.secondary", mb: 4 }}>
-                We have sent a confirmation email to{" "}
-                <Typography component="span" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                  {email}
-                </Typography>
+                Your password has been successfully reset.
                 <br />
-                Please check your email and follow the instructions.
+                You can now login with your new password.
+                <br />
+                <Typography component="span" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.875rem', mt: 2, display: 'block' }}>
+                  Redirecting to login page in 3 seconds...
+                </Typography>
               </Typography>
 
               <Button
@@ -132,7 +137,7 @@ export default function ResetPassword() {
                   transition: 'all 0.2s',
                 }}
               >
-                Return to Login
+                Go to Login Now
               </Button>
             </motion.div>
           )}

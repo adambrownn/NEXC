@@ -20,7 +20,11 @@ const CentersCreate = (props) => {
       setIsEditingId(editId);
       (async () => {
         const resp = await axiosInstance.get(`/centers/${editId}`);
-        setFormInput(resp.data?.length ? resp.data[0] : {});
+        // Handle new API format: { success: true, data: {...} }
+        const centerData = resp.data?.success 
+          ? resp.data.data 
+          : (resp.data?.length ? resp.data[0] : resp.data);
+        setFormInput(centerData || {});
       })();
     }
   }, [editId]);
@@ -34,37 +38,59 @@ const CentersCreate = (props) => {
   };
 
   const handleAddNewCenter = async () => {
-    if (Object.entries(formInput).length > 4) {
-      const coords = formInput.location?.split(",");
-      formInput.geoLocation = {
-        type: "Point",
-        coordinates: [coords[0], coords[1]],
+    if (Object.entries(formInput).length >= 4) {
+      const coords = formInput.location?.split(",").map(c => parseFloat(c.trim()));
+      
+      if (!coords || coords.length !== 2 || coords.some(isNaN)) {
+        alert("Please enter valid coordinates in format: longitude,latitude");
+        return;
+      }
+      
+      const centerData = {
+        ...formInput,
+        geoLocation: {
+          type: "Point",
+          coordinates: coords,
+        }
       };
-      delete formInput.location;
-      const resp = await axiosInstance.post("/centers", formInput);
-      if (resp.data?.err) {
-        alert(resp.data.err);
+      delete centerData.location;
+      
+      const resp = await axiosInstance.post("/centers", centerData);
+      if (resp.data?.err || !resp.data?.success) {
+        alert(resp.data?.err || resp.data?.error || "Failed to create center");
       } else {
-        setCentersList([...centersList, resp.data.centerData]);
+        const _centerList = [...centersList, resp.data?.data || formInput];
+        setCentersList(_centerList);
         setFormInput({});
         alert("Center created successfully");
+        window.location.href = '/dashboard/centers';
       }
     } else {
-      alert("All Inputs are required");
+      alert("All fields are required (Title, Address, Postcode, Location)");
     }
   };
 
   const handleEditCenter = async () => {
-    if (Object.entries(formInput).length > 4) {
-      const coords = formInput.location?.split(",");
-      formInput.geoLocation = {
-        type: "Point",
-        coordinates: [coords[0], coords[1]],
+    if (Object.entries(formInput).length >= 4) {
+      const coords = formInput.location?.split(",").map(c => parseFloat(c.trim()));
+      
+      if (!coords || coords.length !== 2 || coords.some(isNaN)) {
+        alert("Please enter valid coordinates in format: longitude,latitude");
+        return;
+      }
+      
+      const centerData = {
+        ...formInput,
+        geoLocation: {
+          type: "Point",
+          coordinates: coords,
+        }
       };
-      delete formInput.location;
-      const resp = await axiosInstance.put(`/centers/${editId}`, formInput);
-      if (resp.data?.err) {
-        alert(resp.data.err);
+      delete centerData.location;
+      
+      const resp = await axiosInstance.put(`/centers/${editId}`, centerData);
+      if (resp.data?.err || !resp.data?.success) {
+        alert(resp.data?.err || resp.data?.error || "Failed to update center");
       } else {
         const _centerList = centersList.filter(
           (center) => center._id !== formInput?._id
@@ -73,9 +99,10 @@ const CentersCreate = (props) => {
         setFormInput({});
         setIsEditingId("");
         alert("Center edited successfully");
+        window.location.href = '/dashboard/centers';
       }
     } else {
-      alert("All Inputs are required");
+      alert("All fields are required (Title, Address, Postcode, Location)");
     }
   };
 

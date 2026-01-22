@@ -21,10 +21,28 @@ router.put("/:orderId", extractTokenDetails, ordersService.updateOrderData);
 // Delete order
 router.delete("/:orderId", extractTokenDetails, ordersService.deleteOrder);
 
-// Process payment
-router.post("/payment", extractTokenDetails, ordersService.orderPayment);
+// Create payment intent for order (returns clientSecret for Stripe Elements)
+router.post("/:orderId/payment-intent", extractTokenDetails, ordersService.createOrderPaymentIntent);
+
+// Process/confirm payment (legacy endpoint - processes payment with card info)
+router.post("/:orderId/payment", extractTokenDetails, ordersService.orderPayment);
+
+// Confirm payment intent (called after Stripe Elements confirmation)
+router.post("/:orderId/confirm-payment", extractTokenDetails, ordersService.confirmOrderPayment);
 
 // Get aggregate orders (admin only)
 router.post("/aggregate", extractTokenDetails, ordersService.getAggregateOrders);
+
+// Assign technician to order (all items)
+router.patch("/:orderId/assign", extractTokenDetails, ordersService.assignTechnician);
+
+// Assign technician to specific item
+router.patch("/:orderId/items/:itemId/assign", extractTokenDetails, ordersService.assignTechnicianToItem);
+
+// Update order status
+router.patch("/:orderId/status", extractTokenDetails, ordersService.updateOrderStatus);
+
+// Update item status
+router.patch("/:orderId/items/:itemId/status", extractTokenDetails, ordersService.updateItemStatus);
 
 module.exports = router;

@@ -13,7 +13,7 @@ import axiosInstance from "../../../axiosConfig";
 // Enhanced styling with better visual appeal
 const RootStyle = styled('div')(({ theme }) => ({
   padding: theme.spacing(10, 0),
-  background: `linear-gradient(180deg, ${theme.palette.background.default} 0%, ${alpha(theme.palette.primary.lighter, 0.2)} 100%)`,
+  background: `linear-gradient(180deg, ${theme.palette.background.default} 0%, ${alpha(theme.palette.primary.main || '#2065D1', 0.2)} 100%)`,
   position: 'relative',
   overflow: 'hidden',
   '&::after': {
@@ -131,7 +131,7 @@ const ShapeStyle = styled('div')(({ theme }) => ({
   width: 150,
   height: 150,
   borderRadius: '50%',
-  background: alpha(theme.palette.primary.main, 0.08),
+  background: alpha(theme.palette.primary.main || '#2065D1', 0.08),
   zIndex: 0,
   [theme.breakpoints.down('md')]: {
     right: -20,
@@ -230,9 +230,9 @@ export default function LandingAdvertisement() {
         setLoading(true);
         let resp = [];
         if (category) {
-          resp = await axiosInstance.get(`/others/faqs?category=${category}`);
+          resp = await axiosInstance.get(`/v1/faqs?category=${category}`);
         } else {
-          resp = await axiosInstance.get(`/others/faqs`);
+          resp = await axiosInstance.get(`/v1/faqs`);
         }
         setFaqs(resp.data || []);
         setLoading(false);
@@ -261,7 +261,7 @@ export default function LandingAdvertisement() {
                 px: 3,
                 py: 0.5,
                 borderRadius: 1,
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08)
+                bgcolor: (theme) => alpha(theme.palette.primary.main || '#2065D1', 0.08) // Fixed
               }}
             >
               SUPPORT CENTER
@@ -396,11 +396,11 @@ export default function LandingAdvertisement() {
                           color: category === cat || (cat === 'all' && category === '') ? '#fff' : 'text.primary',
                           bgcolor: category === cat || (cat === 'all' && category === '')
                             ? 'primary.main'
-                            : alpha(theme.palette.primary.main, 0.08),
+                            : (theme) => alpha(theme.palette.primary.main || '#2065D1', 0.08), // Fixed
                           '&:hover': {
                             bgcolor: category === cat || (cat === 'all' && category === '')
                               ? 'primary.dark'
-                              : alpha(theme.palette.primary.main, 0.16),
+                              : (theme) => alpha(theme.palette.primary.main || '#2065D1', 0.16), // Fixed
                           }
                         }}
                       >
@@ -420,7 +420,7 @@ export default function LandingAdvertisement() {
                         flexDirection: 'column',
                         justifyContent: 'center',
                         alignItems: 'center',
-                        bgcolor: alpha(theme.palette.primary.main, 0.04),
+                        bgcolor: (theme) => alpha(theme.palette.primary.main || '#2065D1', 0.04), // Fixed
                         borderRadius: 2
                       }}
                     >
@@ -453,7 +453,7 @@ export default function LandingAdvertisement() {
                   right: 'auto',
                   width: 100,
                   height: 100,
-                  background: alpha('#FCA700', 0.08)
+                  background: alpha('#FCA700', 0.08) // This one is fine as it uses a hardcoded color
                 }} />
                 <ContactPaperStyle elevation={0}>
                   <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
@@ -465,7 +465,7 @@ export default function LandingAdvertisement() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         borderRadius: '50%',
-                        bgcolor: alpha(theme.palette.primary.main, 0.08)
+                        bgcolor: (theme) => alpha(theme.palette.primary.main || '#2065D1', 0.08) // Fixed
                       }}
                     >
                       <Icon
@@ -547,7 +547,7 @@ export default function LandingAdvertisement() {
                         sx={{
                           p: 2,
                           borderRadius: 1,
-                          bgcolor: alpha(theme.palette.primary.main, 0.08),
+                          bgcolor: (theme) => alpha(theme.palette.primary.main || '#2065D1', 0.08), // Fixed
                           cursor: 'pointer',
                         }}
                         onClick={() => setActiveTab('contact')}

@@ -34,8 +34,11 @@ const CreateQualification = (props) => {
       setIsEditingId(editId);
       (async () => {
         const resp = await axiosInstance.get(`/qualifications/${editId}`);
-        setFormInput(resp.data?.length ? resp.data[0] : {});
-        setSelectedTrade(resp.data?.length && resp.data[0].tradeId?._id);
+        const qualData = resp.data?.length ? resp.data[0] : resp.data;
+        setFormInput(qualData);
+        // Handle tradeId whether it's populated or just an ID
+        const tradeIdValue = qualData.tradeId?._id || qualData.tradeId;
+        setSelectedTrade(tradeIdValue);
       })();
     }
   }, [editId]);
@@ -66,10 +69,11 @@ const CreateQualification = (props) => {
   };
 
   const handleEditQual = async () => {
-    if (editId && Object.entries(formInput).length > 4) {
+    if (editId && selectedTrade && Object.entries(formInput).length > 4) {
+      const updateData = { ...formInput, tradeId: selectedTrade };
       const resp = await axiosInstance.put(
         `/qualifications/${editId}`,
-        formInput
+        updateData
       );
       if (resp.data?.err) {
         alert(resp.data.err);
@@ -80,10 +84,12 @@ const CreateQualification = (props) => {
         setQualificationsList([..._qualList, formInput]);
         setFormInput({});
         setIsEditingId("");
-        alert("Qualification edited successfully");
+        setSelectedTrade("");
+        alert("Qualification updated successfully");
+        window.location.href = '/dashboard/qualifications';
       }
     } else {
-      alert("All Inputs are required");
+      alert("All fields including trade selection are required");
     }
   };
 
@@ -132,31 +138,45 @@ const CreateQualification = (props) => {
             </Grid>
             <Grid item>
               <FormControl fullWidth>
-                <InputLabel id="cards-id">Category</InputLabel>
+                <InputLabel id="category-id">Category</InputLabel>
                 <Select
-                  labelId="cards-id"
-                  id="demo-simple-select"
+                  labelId="category-id"
+                  id="category-select"
                   name="category"
                   value={formInput.category || ""}
                   onChange={handleInputChange}
                 >
-                  <MenuItem value={"6-months"}>6 Months</MenuItem>
-                  <MenuItem value={"12-months"}>12 Months</MenuItem>
-                  <MenuItem value={"18-months"}>18 Months</MenuItem>
-                  <MenuItem value={"full-payment"}>Full Payment</MenuItem>
+                  <MenuItem value="NVQ">NVQ</MenuItem>
+                  <MenuItem value="Craft Certificate">Craft Certificate</MenuItem>
+                  <MenuItem value="Diploma">Diploma</MenuItem>
+                  <MenuItem value="Apprenticeship">Apprenticeship</MenuItem>
+                  <MenuItem value="Technical Certificate">Technical Certificate</MenuItem>
+                  <MenuItem value="BTEC">BTEC</MenuItem>
+                  <MenuItem value="HNC/HND">HNC/HND</MenuItem>
+                  <MenuItem value="Degree">Degree</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid item>
-              <TextField
-                id="outlined-basic"
-                label={"Qualification Level"}
-                variant="outlined"
-                fullWidth
-                name="level"
-                value={formInput.level || ""}
-                onChange={handleInputChange}
-              />
+              <FormControl fullWidth>
+                <InputLabel id="level-id">Qualification Level</InputLabel>
+                <Select
+                  labelId="level-id"
+                  id="level-select"
+                  name="level"
+                  value={formInput.level || ""}
+                  onChange={handleInputChange}
+                >
+                  <MenuItem value={0}>No Level</MenuItem>
+                  <MenuItem value={1}>Level 1 - Entry</MenuItem>
+                  <MenuItem value={2}>Level 2 - Skilled Worker</MenuItem>
+                  <MenuItem value={3}>Level 3 - Supervisor</MenuItem>
+                  <MenuItem value={4}>Level 4 - Management</MenuItem>
+                  <MenuItem value={5}>Level 5 - Higher Management</MenuItem>
+                  <MenuItem value={6}>Level 6 - Degree</MenuItem>
+                  <MenuItem value={7}>Level 7 - Masters</MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item>
               <TextField
@@ -164,9 +184,39 @@ const CreateQualification = (props) => {
                 label={"Qualification Description"}
                 variant="outlined"
                 fullWidth
+                multiline
+                rows={3}
                 name="description"
                 value={formInput.description || ""}
                 onChange={handleInputChange}
+              />
+            </Grid>
+            <Grid item>
+              <TextField
+                id="outlined-basic"
+                label={"Number of Providers"}
+                variant="outlined"
+                fullWidth
+                type="number"
+                name="providerCount"
+                value={formInput.providerCount || ""}
+                onChange={handleInputChange}
+                helperText="How many providers offer this qualification"
+              />
+            </Grid>
+            <Grid item>
+              <TextField
+                id="outlined-basic"
+                label={"Available Providers"}
+                variant="outlined"
+                fullWidth
+                name="availableProviders"
+                value={formInput.availableProviders?.join(', ') || ""}
+                onChange={(e) => {
+                  const providers = e.target.value.split(',').map(p => p.trim()).filter(p => p);
+                  setFormInput({ ...formInput, availableProviders: providers });
+                }}
+                helperText="Comma-separated list (e.g., City and Guilds, Pearson Edexcel, GQA)"
               />
             </Grid>
             <Grid item>

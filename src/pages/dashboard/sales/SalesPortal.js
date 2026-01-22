@@ -13,20 +13,23 @@ import {
   LinearProgress,
   Alert,
   Button,
+  Switch,
+  FormControlLabel,
+  Paper,
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
   People as PeopleIcon,
   CardMembership as CardMembershipIcon,
   School as SchoolIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Business as BusinessIcon,
 } from '@mui/icons-material';
 import { useSnackbar } from 'notistack';
 import Page from '../../../components/Page';
 import QuickOrderPanel from '../../../components/_dashboard/sales/QuickOrderPanel';
 import CustomerManagement from '../../../components/_dashboard/sales/CustomerManagement';
 import ProductCatalog from '../../../components/_dashboard/sales/ProductCatalog';
-import BookingsOverview from '../../../components/_dashboard/sales/BookingsOverview';
 import { salesService } from '../../../services/sales.service';
 
 function SalesMetricCard({ title, value, icon, trend, color }) {
@@ -87,11 +90,13 @@ export default function SalesPortal() {
   const [salesData, setSalesData] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   const [metrics, setMetrics] = useState(null);
-  const [bookings, setBookings] = useState({ booked: [], reserved: [] });
   const { enqueueSnackbar } = useSnackbar();
 
   // Add state for customer selection
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  
+  // Add state for group booking mode (can be set before customer selection)
+  const [isGroupBookingMode, setIsGroupBookingMode] = useState(false);
 
   const fetchSalesData = useCallback(async () => {
   try {
@@ -119,15 +124,6 @@ export default function SalesPortal() {
       totalRevenue: servicesWithPrices.reduce((sum, s) => sum + s.price, 0)
     }));
 
-      // Only fetch bookings data if we're on the bookings tab
-      if (activeTab === 3) {
-        const orders = await salesService.getOrders();
-        setBookings({ 
-          booked: orders.filter(order => order.orderType === 'ONLINE'),
-          reserved: orders.filter(order => order.orderType === 'PHONE')
-        });
-      }
-
       // Clear any existing errors
       setError(null);
     } catch (error) {
@@ -144,7 +140,7 @@ export default function SalesPortal() {
     } finally {
       setLoading(false);
     }
-  }, [enqueueSnackbar, activeTab]);
+  }, [enqueueSnackbar]);
 
   useEffect(() => {
   if (activeTab !== 0) {
@@ -166,8 +162,14 @@ export default function SalesPortal() {
 
   const handleCustomerSelect = useCallback((customer) => {
   console.log('Customer selected in SalesPortal:', customer);
-  console.log('Switching to Quick Order tab with customer:', customer);  // <-- Add this line here
   setSelectedCustomer(customer);
+  
+  // Auto-enable group booking for company customers
+  if (customer?.customerType === 'COMPANY') {
+    setIsGroupBookingMode(true);
+    console.log('Company customer detected - enabling group booking mode');
+  }
+  
   setActiveTab(0); // Automatically switch to the Quick Order tab
   console.log('Switching to Quick Order tab with customer:', customer);
 }, []);
@@ -258,7 +260,6 @@ export default function SalesPortal() {
                   <Tab label="Quick Order" />
                   <Tab label="Customer Management" />
                   <Tab label="Product Catalog" />
-                  <Tab label="Bookings" />
                 </Tabs>
               </Box>
 
@@ -271,20 +272,53 @@ export default function SalesPortal() {
       onCustomerNeeded={handleCustomerNeeded}
       services={salesData || []}
       onSuccess={handleRefresh}
+      initialGroupBookingMode={isGroupBookingMode}
     />
   ) : (
-    <Box sx={{ textAlign: 'center', py: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        No customer selected
-      </Typography>
-      <Button 
-        variant="contained" 
-        color="primary" 
-        onClick={handleCustomerNeeded}
-        startIcon={<PeopleIcon />}
-      >
-        Select a Customer
-      </Button>
+    <Box sx={{ py: 4 }}>
+      {/* Group Booking Mode Toggle */}
+      <Paper sx={{ p: 3, mb: 4, bgcolor: 'primary.lighter' }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isGroupBookingMode}
+              onChange={(e) => setIsGroupBookingMode(e.target.checked)}
+              color="primary"
+            />
+          }
+          label={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <BusinessIcon color="primary" />
+              <Box>
+                <Typography variant="subtitle1">Group Booking Mode</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Enable for bulk orders with multiple recipients from a company/organization
+                </Typography>
+              </Box>
+            </Box>
+          }
+        />
+      </Paper>
+      
+      <Box sx={{ textAlign: 'center', py: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          {isGroupBookingMode ? 'Select a Company Customer' : 'Select a Customer'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {isGroupBookingMode 
+            ? 'Choose a company customer to create a group booking with multiple recipients'
+            : 'Select an individual or company customer to start an order'
+          }
+        </Typography>
+        <Button 
+          variant="contained" 
+          color="primary" 
+          onClick={handleCustomerNeeded}
+          startIcon={isGroupBookingMode ? <BusinessIcon /> : <PeopleIcon />}
+        >
+          {isGroupBookingMode ? 'Select Company' : 'Select a Customer'}
+        </Button>
+      </Box>
     </Box>
   )
 )}
@@ -298,12 +332,6 @@ export default function SalesPortal() {
                   <ProductCatalog 
                     services={salesData || []}
                     onSuccess={handleRefresh}
-                  />
-                )}
-                {activeTab === 3 && (
-                  <BookingsOverview 
-                    bookings={bookings}
-                    onCustomerSelect={handleCustomerSelect}
                   />
                 )}
               </Box>

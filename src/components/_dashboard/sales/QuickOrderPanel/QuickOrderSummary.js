@@ -137,16 +137,24 @@ const QuickOrderSummary = ({
           Order Created Successfully
         </Typography>
         <Typography>
-          Order ID: {orderSummary?._id || 'N/A'}
+          Order Reference: {createdOrder?.orderReference || orderSummary?.orderReference || orderDraft?.orderReference || 'N/A'}
         </Typography>
         <Typography>
-          Order Reference: {createdOrder?.orderReference || orderDraft?.orderReference || 'N/A'}
+          Order ID: {createdOrder?._id || createdOrder?.id || orderSummary?._id || orderSummary?.id || 'N/A'}
         </Typography>
         <Typography>
-          Total Amount: £{orderSummary?.amount || orderSummary?.itemsTotal || 0}
+          Total Amount: £{(
+            createdOrder?.grandTotalToPay || 
+            createdOrder?.itemsTotal || 
+            createdOrder?.amount || 
+            orderSummary?.grandTotalToPay || 
+            orderSummary?.itemsTotal || 
+            orderSummary?.amount || 
+            0
+          ).toFixed(2)}
         </Typography>
         <Typography>
-          Created At: {orderSummary?.createdAt ? new Date(orderSummary.createdAt).toLocaleString() : 'N/A'}
+          Created At: {(createdOrder?.createdAt || orderSummary?.createdAt) ? new Date(createdOrder?.createdAt || orderSummary?.createdAt).toLocaleString() : 'N/A'}
         </Typography>
         
         <Button

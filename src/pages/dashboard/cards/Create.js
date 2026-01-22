@@ -4,10 +4,17 @@ import {
   Grid,
   InputAdornment,
   OutlinedInput,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Box,
+  Stack
 } from "@mui/material";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import SaveIcon from '@mui/icons-material/Save';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import Select from "@mui/material/Select";
@@ -16,7 +23,8 @@ import TextField from "@mui/material/TextField";
 import { gridSpacing } from "../../../utils/constant";
 import SubCard from "../../../components/_dashboard/cards/SubCard";
 import axiosInstance from "../../../axiosConfig";
-import TradeSelectCard from "../../../components/_dashboard/cards/TradeSelectCard";
+import MultiTradeSelectCard from "../../../components/_dashboard/cards/MultiTradeSelectCard";
+import MediaGallery from "../../../components/_dashboard/blog/MediaGallery";
 import { useLocation } from "react-router-dom";
 
 const TradeContext = createContext();
@@ -26,6 +34,7 @@ function CardCreate() {
   const [isEditingId, setIsEditingId] = useState("");
   const [formInput, setFormInput] = useState({});
   const [selectedTrades, setSelectedTrades] = useState([]);
+  const [showMediaGallery, setShowMediaGallery] = useState(false);
 
   const editId = useLocation().pathname?.split("/")[4];
 
@@ -34,8 +43,27 @@ function CardCreate() {
     setIsEditingId(editId);
     (async () => {
       const resp = await axiosInstance.get(`/cards/${editId}`);
-      setFormInput(resp.data?.length ? resp.data[0] : {});
-      setSelectedTrades(resp.data?.length ? resp.data[0].tradeId : null);
+      const cardData = resp.data?.length ? resp.data[0] : {};
+      setFormInput(cardData);
+      
+      // Handle tradeId - can be array of IDs or objects
+      if (cardData.tradeId) {
+        if (Array.isArray(cardData.tradeId)) {
+          // If it's already an array, check if they're objects or just IDs
+          const trades = cardData.tradeId.map(trade => 
+            typeof trade === 'object' ? trade : { _id: trade, title: 'Loading...' }
+          );
+          setSelectedTrades(trades);
+        } else if (typeof cardData.tradeId === 'object') {
+          // Single trade object
+          setSelectedTrades([cardData.tradeId]);
+        } else {
+          // Single trade ID
+          setSelectedTrades([{ _id: cardData.tradeId, title: 'Loading...' }]);
+        }
+      } else {
+        setSelectedTrades([]);
+      }
     })();
   }
 }, [editId]);
@@ -46,6 +74,14 @@ function CardCreate() {
       ...formInput,
       [name]: value,
     });
+  };
+
+  const handleSelectCardImage = (media) => {
+    setFormInput(prev => ({
+      ...prev,
+      image: media.url
+    }));
+    setShowMediaGallery(false);
   };
 
   const handleAddNewCard = async () => {
@@ -97,24 +133,11 @@ function CardCreate() {
                     <TradeContext.Provider
                       value={{ selectedTrades, setSelectedTrades }}
                     >
-                      <TradeSelectCard
-                        {...selectedTrades}
+                      <MultiTradeSelectCard
                         tradeContext={TradeContext}
                       />
                     </TradeContext.Provider>
                   </Grid>
-                  <Grid item>
-  <TextField
-    id="outlined-basic"
-    label="Selected Trades"
-    variant="outlined"
-    fullWidth
-    value={selectedTrades.map(trade => trade.title).join(', ')}
-    InputProps={{
-      readOnly: true,
-    }}
-  />
-</Grid>
                   <Grid item>
                     <TextField
                       id="outlined-basic"
@@ -144,15 +167,43 @@ function CardCreate() {
                     </FormControl>
                   </Grid>
                   <Grid item>
-                    <TextField
-                      id="outlined-basic"
-                      label="Card Image"
-                      variant="outlined"
-                      fullWidth
-                      name="image"
-                      value={formInput.image || ""}
-                      onChange={handleInputChange}
-                    />
+                    <Box>
+                      <InputLabel sx={{ mb: 1 }}>Card Image</InputLabel>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        {formInput.image && (
+                          <Box
+                            component="img"
+                            src={formInput.image}
+                            alt="Card preview"
+                            sx={{
+                              width: 100,
+                              height: 60,
+                              objectFit: 'cover',
+                              borderRadius: 1,
+                              border: 1,
+                              borderColor: 'divider'
+                            }}
+                          />
+                        )}
+                        <Stack spacing={1}>
+                          <Button
+                            variant="outlined"
+                            startIcon={<PhotoLibraryIcon />}
+                            onClick={() => setShowMediaGallery(true)}
+                          >
+                            Select Image
+                          </Button>
+                          <TextField
+                            size="small"
+                            label="Or enter URL"
+                            fullWidth
+                            name="image"
+                            value={formInput.image || ""}
+                            onChange={handleInputChange}
+                          />
+                        </Stack>
+                      </Stack>
+                    </Box>
                   </Grid>
                   <Grid item>
                     <FormControl fullWidth>
@@ -255,6 +306,29 @@ function CardCreate() {
           </Grid>
         </CardContent>
       </Grid>
+
+      <Dialog
+        open={showMediaGallery}
+        onClose={() => setShowMediaGallery(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>Select Card Image</DialogTitle>
+        <DialogContent>
+          <MediaGallery
+            onSelectMedia={handleSelectCardImage}
+            selectionMode={true}
+            allowMultiple={false}
+            allowedTypes={['image']}
+            category="cover"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowMediaGallery(false)}>
+            Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Grid>
   );
 }

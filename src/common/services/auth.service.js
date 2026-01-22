@@ -29,32 +29,43 @@ module.exports.extractTokenDetails = async (req, res, next) => {
     const token = req.headers.authorization?.split(" ")[1];
     // to separate Bearer and token
 
-    if (!token) throw new Error("Auth token missing");
+    if (!token) {
+      return res.status(401).json({ 
+        status: 'error',
+        error: 'Auth token missing',
+        message: 'Authentication required'
+      });
+    }
 
     // verify jwt token
-    const jwtDecoded = await jwt.verify(token, process.env.AUTH_JWT);
+    const jwtDecoded = await jwt.verify(token, process.env.JWT_SECRET);
     // attach decoded jwt with req
     req.user = jwtDecoded;
 
     next();
   } catch (err) {
-    console.log(err);
-    if (err.name == "TokenExpiredError") {
-      res.json({ err: "JWT expired." });
-      return;
+    console.error('[Auth] Token verification failed:', err.message);
+    
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ 
+        status: 'error',
+        error: 'JWT expired',
+        message: 'Your session has expired. Please log in again.'
+      });
     }
-    if (err.message == "Auth token missing") {
-      res.json({ err: err.message });
-      return;
-    }
-    res.json({ err: "Invalid Token." });
+    
+    return res.status(401).json({ 
+      status: 'error',
+      error: 'Invalid token',
+      message: 'Authentication failed'
+    });
   }
 };
 
 module.exports.verifyToken = async (token) => {
-  return jwt.verify(token, process.env.AUTH_JWT);
+  return jwt.verify(token, process.env.JWT_SECRET);
 };
 
 module.exports.extractRefreshTokenDetails = async (token) => {
-  return jwt.verify(token, process.env.AUTH_REFRESH_JWT);
+  return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 };

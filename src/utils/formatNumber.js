@@ -4,21 +4,26 @@ import numeral from "numeral";
 // ----------------------------------------------------------------------
 
 export function fCurrency(number) {
-  return numeral(number).format(Number.isInteger(number) ? "$0,0" : "$0,0.00");
+  if (!number) return "£0";
+  return `£${Number(number).toLocaleString()}`;
 }
 
 export function fPercent(number) {
-  return numeral(number / 100).format("0.0%");
+  if (!number) return "0%";
+  return `${Number(number).toFixed(1)}%`;
 }
 
 export function fNumber(number) {
-  return numeral(number).format();
+  if (number === null || number === undefined) return "0";
+  return numeral(number).format("0,0");
 }
 
 export function fShortenNumber(number) {
+  if (number === null || number === undefined) return "0";
   return replace(numeral(number).format("0.00a"), ".00", "");
 }
 
 export function fData(number) {
+  if (number === null || number === undefined) return "0 bytes";
   return numeral(number).format("0.0 b");
 }

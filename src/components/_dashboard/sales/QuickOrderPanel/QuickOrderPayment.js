@@ -14,7 +14,7 @@ import {
   normalizeCustomerObject,
   prepareAmountForApi,
   prepareAmountForDisplay
-} from '../../../../utils/dataNormalization';
+} from '../../../../utils/dataNormalizationClient';
 
 /**
  * Component for handling payment processing in the QuickOrderPanel
