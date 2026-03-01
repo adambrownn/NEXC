@@ -95,7 +95,7 @@
     "mailgun-js": "^0.22.0",
     "mapbox-gl": "^3.9.3",
     "mongoose": "^8.9.5",
-    "multer": "^2.0.2",
+    "multer": "^2.1.0",
     "notistack": "^3.0.2",
     "nprogress": "^0.2.0",
     "numeral": "^2.0.6",
