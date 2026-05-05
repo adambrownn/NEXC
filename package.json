@@ -94,7 +94,7 @@
     "lodash": "^4.17.21",
     "mailgun-js": "^0.22.0",
     "mapbox-gl": "^3.9.3",
-    "mongoose": "^8.9.5",
+    "mongoose": "^8.23.1",
     "multer": "^2.0.2",
     "notistack": "^3.0.2",
     "nprogress": "^0.2.0",
